@@ -119,6 +119,19 @@ VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
 VITE_API_URL=http://localhost:3001
 ```
 
+## Build quirks
+
+### `@clerk/react@5.54.0` + `@clerk/shared@3.47.5` mismatch
+`@clerk/react@5.54.0` imports `loadClerkUiScript` from `@clerk/shared/loadClerkJsScript`, but no `3.x` release exports it (publishing bug in Clerk). Fixed via a Vite plugin shim in `apps/web/vite.config.ts`:
+- `enforce: 'pre'` so it intercepts before Vite's resolver
+- Intercepts `@clerk/shared/loadClerkJsScript` → virtual module
+- Re-exports the 4 real functions from the actual `.mjs` file + adds `loadClerkUiScript` as a no-op
+
+Do NOT add an `overrides` for `@clerk/shared@4.x` — it breaks `useSessionContext`.
+
+### Web host port
+The web container runs on 3000 internally (nginx). Host port is mapped to **3002** in `docker-compose.yml` to avoid conflict with `open-webui` which already holds `127.0.0.1:3000`. Frontend is at `http://localhost:3002`.
+
 ## Common commands
 
 ```bash
@@ -142,13 +155,18 @@ bun run dev:web      # port 3000
 stripe listen --forward-to localhost:3001/webhooks/stripe
 ```
 
-## Pending work (as of 2026-05-20)
+## Pending work (as of 2026-05-21)
 
 - [x] Run `bun install` after adding stripe/svix/husky/lint-staged deps
 - [x] All 28 Vitest tests passing (auth, subscription, battle-no-regression, stripe-webhook)
-- [ ] Run `bun run prepare` to initialize Husky (activates pre-commit hook)
-- [ ] Wire `SubscriptionStatus` component into the main nav
+- [x] Docker stack fully building and running (`docker compose up --build`)
+- [x] API health: `http://localhost:3001/health` → 292 Pokémon in DB
+- [x] Web SPA serving at `http://localhost:3002`
+- [x] Repo pushed to https://github.com/urielreyna06/pokemon-battle-rooms
+- [ ] Run `bun run prepare` in repo root to initialize Husky pre-commit hook
+- [ ] Wire `SubscriptionStatus` component into `apps/web/app/routes/__root.tsx` main nav
 - [ ] E2E tests for the pricing/subscription flow
 - [ ] Real-time battle updates (currently polling every 1.5s — consider WebSocket/SSE)
 - [ ] Turn timer (currently no limit; a player can stall indefinitely)
 - [ ] Spectator mode
+- [ ] Revoke/rotate GitHub tokens shared in session (PAT + 2 classic tokens for urielreyna06)
