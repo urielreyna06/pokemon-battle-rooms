@@ -1,0 +1,25 @@
+{
+  "name": "@pokemon-battle/api",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "bun run --hot src/server.ts",
+    "start": "bun run src/server.ts",
+    "build": "bun build src/server.ts --outdir dist --target bun",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "hono": "^4.4.0",
+    "mongodb": "^6.7.0",
+    "@clerk/backend": "^1.13.0",
+    "@pokemon-battle/shared": "workspace:*",
+    "stripe": "^16.0.0",
+    "svix": "^1.21.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "vitest": "^2.0.0",
+    "@vitest/coverage-v8": "^2.0.0"
+  }
+}

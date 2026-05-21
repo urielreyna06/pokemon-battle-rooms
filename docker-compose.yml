@@ -1,0 +1,68 @@
+version: "3.8"
+
+services:
+  # ─── Base de datos ───────────────────────────────────────────────────────────
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ─── Backend (Hono + Bun) ────────────────────────────────────────────────────
+  api:
+    image: pokemon-battle/api   # named so importer can reuse without rebuilding
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - MONGO_URL=mongodb://mongo:27017/pokemon_battle
+      - PORT=3001
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - CLERK_WEBHOOK_SECRET=${CLERK_WEBHOOK_SECRET}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PRICE_ID=${STRIPE_PRICE_ID}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - CLIENT_URL=${CLIENT_URL:-http://localhost:3000}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ─── Frontend (SPA estática servida por nginx) ───────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # VITE_* vars are baked into the JS bundle at build time — browser reads them
+        VITE_API_URL: http://localhost:3001
+        VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY}
+        VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY}
+    ports:
+      - "3002:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # ─── Script de importación (se ejecuta una sola vez con --profile import) ────
+  importer:
+    image: pokemon-battle/api   # reuses the api image — no duplicate build
+    environment:
+      - MONGO_URL=mongodb://mongo:27017/pokemon_battle
+    depends_on:
+      mongo:
+        condition: service_healthy
+    command: ["bun", "run", "/app/scripts/import-pokemon.ts"]
+    profiles:
+      - import
+
+volumes:
+  mongo_data:

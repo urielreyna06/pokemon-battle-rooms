@@ -1,0 +1,405 @@
+/* ============================================================
+   PokeBattle — Design tokens, component classes & keyframes
+   Ported from design_handoff_pokebattle/index.html
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&display=swap');
+
+:root {
+  /* Core ink */
+  --ink-1:        #14101a;
+  --ink-2:        #2a1f2e;
+  --ink-soft:     #5b4a5e;
+  --cream:        #f8efd1;
+  --cream-dk:     #d8c8a0;
+  --cream-shadow: #8b7340;
+  --paper:        #ffffff;
+
+  /* HP gradient palette */
+  --hp-hi:      #5fc63a;
+  --hp-hi-dk:   #2f8a18;
+  --hp-mid:     #f8b830;
+  --hp-mid-dk:  #b88018;
+  --hp-lo:      #e02828;
+  --hp-lo-dk:   #901818;
+
+  /* Action button palette */
+  --btn-red:      #d83040;
+  --btn-red-hi:   #ff7080;
+  --btn-yellow:   #e8b020;
+  --btn-yellow-hi:#ffe070;
+  --btn-green:    #4ab030;
+  --btn-green-hi: #7fe060;
+  --btn-blue:     #3878c8;
+  --btn-blue-hi:  #70b8ff;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #08060e;
+  overflow: hidden;
+  font-family: 'VT323', 'Silkscreen', system-ui, monospace;
+  color: #f0e8d0;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+img, svg, .pixelated {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+.font-pixel      { font-family: 'Press Start 2P', monospace; letter-spacing: 0.02em; }
+.font-pixel-lg   { font-family: 'Silkscreen', monospace; }
+.font-pixel-body { font-family: 'VT323', monospace; }
+
+/* ============================================================
+   PIX-FRAME — chunky cream box with double border + drop shadow
+   ============================================================ */
+.pix-frame {
+  background: var(--cream);
+  color: var(--ink-2);
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 3px var(--ink-1),
+    0 0 0 5px var(--cream),
+    0 0 0 7px var(--ink-2),
+    6px 6px 0 0 #000;
+  position: relative;
+}
+.pix-frame::before {
+  content: '';
+  position: absolute;
+  top: 6px; left: 12px; right: 12px; height: 2px;
+  background: #fff;
+  border-radius: 1px;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.pix-frame-tight {
+  background: var(--cream);
+  color: var(--ink-2);
+  border: 3px solid var(--ink-1);
+  border-radius: 8px;
+  box-shadow: 0 3px 0 #000, inset 0 1px 0 rgba(255,255,255,0.5);
+}
+.pix-frame-dark {
+  background: #1e1828;
+  color: var(--cream);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 3px #000,
+    0 0 0 5px #1e1828,
+    0 0 0 7px #4a3a5a,
+    6px 6px 0 0 #000;
+}
+
+/* ============================================================
+   PIX-BTN — chunky pixel pill with top-highlight + drop shadow
+   ============================================================ */
+.pix-btn {
+  --btn-bg: var(--paper);
+  --btn-hi: rgba(255,255,255,0.6);
+  --btn-fg: var(--ink-2);
+
+  position: relative;
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  border: 3px solid var(--ink-1);
+  border-radius: 999px;
+  padding: 12px 22px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: transform 0.06s ease, box-shadow 0.06s ease;
+  box-shadow: 0 4px 0 #000, inset 0 -3px 0 rgba(0,0,0,0.25);
+  text-align: center;
+  overflow: hidden;
+}
+.pix-btn::before {
+  content: '';
+  position: absolute;
+  top: 4px; left: 14px; right: 14px;
+  height: 3px;
+  background: var(--btn-hi);
+  border-radius: 2px;
+  pointer-events: none;
+}
+.pix-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 0 #000, inset 0 -3px 0 rgba(0,0,0,0.25);
+  filter: brightness(1.08);
+}
+.pix-btn:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #000, inset 0 -3px 0 rgba(0,0,0,0.25);
+}
+.pix-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.pix-btn-red    { --btn-bg: var(--btn-red);    --btn-hi: var(--btn-red-hi);    --btn-fg: #fff; }
+.pix-btn-yellow { --btn-bg: var(--btn-yellow); --btn-hi: var(--btn-yellow-hi); --btn-fg: var(--ink-2); }
+.pix-btn-green  { --btn-bg: var(--btn-green);  --btn-hi: var(--btn-green-hi);  --btn-fg: #fff; }
+.pix-btn-blue   { --btn-bg: var(--btn-blue);   --btn-hi: var(--btn-blue-hi);   --btn-fg: #fff; }
+
+/* ============================================================
+   HP BAR
+   ============================================================ */
+.hp-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: #fff;
+  background: linear-gradient(to bottom, #f8a830 0%, #f8a830 45%, #c87010 55%, #c87010 100%);
+  border: 2px solid var(--ink-1);
+  border-radius: 4px;
+  padding: 2px 5px;
+  text-shadow: 1px 1px 0 var(--ink-1);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 0 #000;
+  letter-spacing: 0.08em;
+}
+.hp-track {
+  height: 9px;
+  background: linear-gradient(to bottom, #1a1018 0%, #1a1018 40%, #3a2828 100%);
+  border-radius: 5px;
+  border: 2px solid var(--ink-1);
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.4);
+}
+.hp-fill {
+  height: 100%;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(to bottom, var(--hp-hi) 0%, var(--hp-hi) 40%, var(--hp-hi-dk) 41%, var(--hp-hi-dk) 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+}
+.hp-fill.mid { background: linear-gradient(to bottom, var(--hp-mid) 0%, var(--hp-mid) 40%, var(--hp-mid-dk) 41%, var(--hp-mid-dk) 100%); }
+.hp-fill.lo  { background: linear-gradient(to bottom, var(--hp-lo)  0%, var(--hp-lo)  40%, var(--hp-lo-dk)  41%, var(--hp-lo-dk)  100%); }
+
+.xp-track {
+  height: 4px;
+  background: #1a1018;
+  border: 2px solid var(--ink-1);
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,0.5);
+}
+.xp-fill {
+  height: 100%;
+  background: linear-gradient(to bottom, #5fb8ff 0%, #5fb8ff 45%, #2078c8 55%, #2078c8 100%);
+  transition: width 0.5s ease-out;
+}
+
+/* ============================================================
+   NAMEPLATE
+   ============================================================ */
+.nameplate {
+  position: relative;
+  background: var(--cream);
+  color: var(--ink-2);
+  padding: 8px 16px 10px 14px;
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 3px var(--ink-1),
+    0 0 0 5px var(--cream),
+    0 0 0 7px var(--ink-2),
+    5px 5px 0 0 #000;
+}
+.nameplate::before {
+  content: '';
+  position: absolute;
+  top: 4px; left: 10px; right: 10px; height: 2px;
+  background: #fff;
+  opacity: 0.6;
+  border-radius: 1px;
+  pointer-events: none;
+}
+.nameplate-enemy::after {
+  content: '';
+  position: absolute;
+  right: -7px; bottom: -7px;
+  width: 30px; height: 12px;
+  background: var(--cream);
+  box-shadow: 0 0 0 3px var(--ink-1), 0 0 0 5px var(--cream), 0 0 0 7px var(--ink-2), 3px 5px 0 0 #000;
+  border-radius: 0 0 6px 6px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 8px 100%);
+}
+.nameplate-player::after {
+  content: '';
+  position: absolute;
+  left: -7px; bottom: -7px;
+  width: 30px; height: 12px;
+  background: var(--cream);
+  box-shadow: 0 0 0 3px var(--ink-1), 0 0 0 5px var(--cream), 0 0 0 7px var(--ink-2), -3px 5px 0 0 #000;
+  border-radius: 0 0 6px 6px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+
+/* ============================================================
+   POKEBALL DOTS
+   ============================================================ */
+.ball-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid var(--ink-1);
+  background: linear-gradient(to bottom, var(--btn-red) 0%, var(--btn-red) 45%, var(--ink-1) 46%, var(--ink-1) 54%, #fff 55%, #fff 100%);
+  flex-shrink: 0;
+  box-shadow: 0 1px 0 #000, inset 0 1px 0 rgba(255,255,255,0.4);
+}
+.ball-dot.fainted { background: linear-gradient(to bottom, #666 0%, #666 45%, var(--ink-1) 46%, var(--ink-1) 54%, #888 55%, #888 100%); }
+.ball-dot.empty   { background: #2a2030; }
+
+/* ============================================================
+   SCENES
+   ============================================================ */
+.scene {
+  position: absolute; inset: 0;
+  overflow: hidden;
+}
+.scene::after {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 60%, transparent 30%, rgba(0,0,0,0.4) 80%, rgba(0,0,0,0.7) 100%),
+    linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.3) 100%);
+  pointer-events: none;
+}
+.scene-grass {
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(255,200,140,0.18) 0%, transparent 55%),
+    linear-gradient(to bottom,
+      #1a1028 0%,  #1a1028 14%,
+      #38204c 15%, #38204c 26%,
+      #6a3a5a 27%, #6a3a5a 36%,
+      #b06848 37%, #b06848 44%,
+      #5e8a40 45%, #5e8a40 56%,
+      #3e6a2c 57%, #3e6a2c 72%,
+      #2a4a20 73%, #2a4a20 88%,
+      #14280e 89%, #14280e 100%);
+}
+.scene-cave {
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 48%, rgba(180,140,200,0.22) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 30% at 50% 52%, rgba(240,180,120,0.10) 0%, transparent 75%),
+    linear-gradient(to bottom,
+      #060410 0%,  #060410 14%,
+      #14102a 15%, #14102a 28%,
+      #281c44 29%, #281c44 42%,
+      #3a2e58 43%, #3a2e58 56%,
+      #2c2244 57%, #2c2244 70%,
+      #18102a 71%, #18102a 84%,
+      #080614 85%, #080614 100%);
+}
+.scene-water {
+  background:
+    radial-gradient(ellipse 50% 30% at 50% 38%, rgba(180,210,255,0.18) 0%, transparent 65%),
+    linear-gradient(to bottom,
+      #050a18 0%,  #050a18 12%,
+      #0e1e3a 13%, #0e1e3a 26%,
+      #1c3868 27%, #1c3868 40%,
+      #2858a8 41%, #2858a8 55%,
+      #1c3868 56%, #1c3868 72%,
+      #0e1e3a 73%, #0e1e3a 90%,
+      #050a18 91%, #050a18 100%);
+}
+.scene-sunset {
+  background:
+    radial-gradient(ellipse 35% 25% at 75% 32%, rgba(255,230,160,0.4) 0%, transparent 60%),
+    linear-gradient(to bottom,
+      #14081c 0%,  #14081c 10%,
+      #3a1238 11%, #3a1238 22%,
+      #7c2030 23%, #7c2030 33%,
+      #d04020 34%, #d04020 42%,
+      #f0801c 43%, #f0801c 52%,
+      #ac3818 53%, #ac3818 64%,
+      #5a1c1c 65%, #5a1c1c 80%,
+      #1c0810 81%, #1c0810 100%);
+}
+.scene-tex::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(0deg, rgba(0,0,0,0.06) 50%, transparent 50%),
+    linear-gradient(90deg, rgba(0,0,0,0.04) 50%, transparent 50%);
+  background-size: 4px 4px, 4px 4px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Spotlight halo under each creature */
+.spotlight {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(255,235,180,0.22) 0%, rgba(255,235,180,0.08) 40%, transparent 70%);
+  pointer-events: none;
+  filter: blur(2px);
+}
+
+/* Ember/dust particles */
+.ember-particle {
+  position: absolute;
+  width: 2px; height: 2px;
+  background: #f8c038;
+  border-radius: 50%;
+  box-shadow: 0 0 4px #f8a830;
+  pointer-events: none;
+  animation: ember linear infinite;
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%  { transform: translateX(-12px); }
+  40%  { transform: translateX(12px); }
+  60%  { transform: translateX(-8px); }
+  80%  { transform: translateX(8px); }
+}
+@keyframes lungeUp   { 0%,100%{transform:translate(0,0)} 50%{transform:translate(10px,-22px) scale(1.06)} }
+@keyframes lungeDown { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-10px,22px) scale(1.06)} }
+@keyframes faintFall { 0%{transform:translateY(0) rotate(0);opacity:1} 100%{transform:translateY(80px) rotate(-15deg);opacity:0.15} }
+@keyframes popIn     { 0%{transform:scale(0)} 70%{transform:scale(1.18)} 100%{transform:scale(1)} }
+@keyframes flashWhite{ 0%,100%{filter:brightness(1)} 40%{filter:brightness(5) saturate(0)} }
+@keyframes blink     { 0%, 90%{opacity:1} 91%, 100%{opacity:0} }
+@keyframes float     { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+@keyframes confettiFall { 0%{transform:translateY(-10vh) rotate(0)} 100%{transform:translateY(100vh) rotate(720deg);opacity:0} }
+@keyframes textScroll{ from{clip-path:inset(0 100% 0 0)} to{clip-path:inset(0 0 0 0)} }
+@keyframes drift     { 0%{transform:translateX(-10%)} 100%{transform:translateX(110%)} }
+@keyframes twinkle   { 0%,100%{opacity:0.3} 50%{opacity:1} }
+@keyframes spotlightPulse { 0%,100%{opacity:0.4;transform:scale(1)} 50%{opacity:0.6;transform:scale(1.05)} }
+@keyframes ember     { 0%{transform:translateY(0) translateX(0);opacity:0.8} 100%{transform:translateY(-100vh) translateX(40px);opacity:0} }
+
+.animate-shake      { animation: shake 0.45s steps(5, end); }
+.animate-lunge-up   { animation: lungeUp 0.45s ease-in-out; }
+.animate-lunge-down { animation: lungeDown 0.45s ease-in-out; }
+.animate-faint      { animation: faintFall 0.9s ease-in forwards; }
+.animate-popIn      { animation: popIn 0.3s steps(4, end); }
+.animate-flash      { animation: flashWhite 0.32s linear; }
+.animate-blink      { animation: blink 0.9s steps(2, end) infinite; }
+.animate-float      { animation: float 2.5s ease-in-out infinite; }
+.animate-confetti   { animation: confettiFall linear forwards; }
+.animate-textScroll { animation: textScroll 0.4s linear; }
+.animate-drift      { animation: drift linear infinite; }
+.animate-twinkle    { animation: twinkle 2s ease-in-out infinite; }
+.animate-spotlight  { animation: spotlightPulse 3s ease-in-out infinite; }
+
+/* Blinking dialogue arrow */
+.next-arrow::after {
+  content: '▾';
+  position: absolute; right: 18px; bottom: 10px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: var(--ink-2);
+  animation: blink 0.7s steps(2, end) infinite;
+}
+
+/* Scrollbars */
+.scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 3px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: var(--ink-soft); border-radius: 3px; border: 1px solid var(--ink-1); }
+
+.text-pixel-shadow { text-shadow: 3px 3px 0 rgba(0,0,0,0.85); }
+.text-pixel-glow   { text-shadow: 0 0 6px currentColor, 3px 3px 0 rgba(0,0,0,0.9); }

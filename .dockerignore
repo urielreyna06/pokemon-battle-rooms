@@ -1,0 +1,43 @@
+# Dependencies — never copy; each container installs its own
+node_modules
+**/node_modules
+
+# Build outputs
+dist
+**/dist
+build
+**/.next
+**/.turbo
+*.tsbuildinfo
+
+# Git
+.git
+.gitignore
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Test output
+coverage
+.nyc_output
+
+# Docker meta-files (not needed inside the build context)
+**/Dockerfile
+docker-compose*.yml
+.dockerignore

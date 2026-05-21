@@ -1,0 +1,75 @@
+import { Hono } from "hono";
+import { getDb } from "../db";
+import { registerAction, bothPlayersActed, processTurn } from "../engine/battleEngine";
+import { requireAuth, type AuthEnv } from "../middleware/requireAuth";
+import type { BattleDoc, Action, ActionResponse } from "../../../../packages/shared/types";
+
+export const battleRoutes = new Hono<AuthEnv>();
+battleRoutes.use("*", requireAuth);
+
+// GET /battle/:roomCode — current battle state
+battleRoutes.get("/:roomCode", async (c) => {
+  try {
+    const db = await getDb();
+    const { roomCode } = c.req.param();
+
+    const battle = await db
+      .collection<BattleDoc>("battles")
+      .findOne({ roomCode }, { projection: { _id: 0 } });
+
+    if (!battle) return c.json({ error: "Battle not found" }, 404);
+
+    return c.json({ battle });
+  } catch (err) {
+    console.error("GET /battle/:roomCode error:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// POST /battle/:roomCode/action — submit player action
+battleRoutes.post("/:roomCode/action", async (c) => {
+  try {
+    const db = await getDb();
+    const { roomCode } = c.req.param();
+    const body = await c.req.json<{ playerId: string; action: Action }>();
+
+    if (!body.playerId || !body.action) {
+      return c.json({ error: "playerId and action are required" }, 400);
+    }
+
+    const battle = await db
+      .collection<BattleDoc>("battles")
+      .findOne({ roomCode });
+
+    if (!battle) return c.json({ error: "Battle not found" }, 404);
+
+    if (battle.status !== "active") {
+      return c.json({ error: "Battle is already finished" }, 409);
+    }
+
+    // Validate and register the action
+    const result = await registerAction(db, battle, body.playerId, body.action);
+    if (!result.valid) {
+      return c.json({ error: result.error }, 400);
+    }
+
+    // Reload battle after action registration
+    const updatedBattle = (await db
+      .collection<BattleDoc>("battles")
+      .findOne({ roomCode }))!;
+
+    // If both players have acted, resolve the turn
+    if (bothPlayersActed(updatedBattle)) {
+      const resolvedBattle = await processTurn(db, updatedBattle);
+      const response: ActionResponse = { battle: resolvedBattle };
+      return c.json(response);
+    }
+
+    // Return current state (waiting for other player)
+    const response: ActionResponse = { battle: updatedBattle };
+    return c.json(response);
+  } catch (err) {
+    console.error("POST /battle/:roomCode/action error:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});

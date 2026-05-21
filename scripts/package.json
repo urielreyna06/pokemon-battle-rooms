@@ -1,0 +1,7 @@
+{
+  "name": "@pokemon-battle/scripts",
+  "version": "1.0.0",
+  "dependencies": {
+    "mongodb": "^6.7.0"
+  }
+}

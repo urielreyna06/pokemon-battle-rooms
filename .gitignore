@@ -1,0 +1,39 @@
+# Environment variables — NEVER commit these
+.env
+.env.local
+.env.*.local
+keys.txt
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+.output/
+
+# Bun
+bun.lockb
+
+# Vite
+.vite/
+
+# TypeScript
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+bun-debug.log*
+
+# Docker volumes (local)
+mongo_data/
+
+# Test coverage
+coverage/

@@ -1,0 +1,24 @@
+{
+  "name": "pokemon-battle-rooms",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["apps/api", "packages/*"],
+  "scripts": {
+    "import": "bun run scripts/import-pokemon.ts",
+    "dev:api": "bun run --cwd apps/api dev",
+    "dev:web": "bun run --cwd apps/web dev",
+    "build:api": "bun run --cwd apps/api build",
+    "build:web": "bun run --cwd apps/web build",
+    "test": "bun run --cwd apps/api test",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0"
+  },
+  "lint-staged": {
+    "apps/api/**/*.ts": [
+      "bun run --cwd apps/api test"
+    ]
+  }
+}
