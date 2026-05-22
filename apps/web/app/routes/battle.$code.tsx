@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
+import { useAuth } from '@clerk/react';
 import { useApi } from '../hooks/useApi';
 import { HPBar } from '../components/HPBar';
 import { PokemonSprite } from '../components/PokemonSprite';
@@ -16,6 +17,9 @@ import type {
   BattlePlayerState,
   Action,
 } from '@pokemon-battle/shared';
+
+const API_BASE = (import.meta.env.VITE_API_URL as string) ?? 'http://localhost:3001';
+const TURN_TIMEOUT_S = 60;
 
 export const Route = createFileRoute('/battle/$code')({
   component: BattlePage,
@@ -38,27 +42,19 @@ function BattlePage() {
     ? (JSON.parse(stored) as { playerId: string })
     : { playerId: '' };
 
+  const { getToken, userId } = useAuth();
   const [battle, setBattle] = useState<BattleDoc | null>(null);
   const [phase, setPhase] = useState<Phase>('menu');
   const phaseRef = useRef<Phase>('menu'); // mirror of phase for use in closures
   const [anim, setAnim] = useState<AnimState>(null);
   const [toast, setToast] = useState<ToastState>(null);
+  const [timeLeft, setTimeLeft] = useState(TURN_TIMEOUT_S);
   const prevLogLen = useRef(0);
-  const pollInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const evtSource = useRef<EventSource | null>(null);
+  const autoSubmitRef = useRef<() => void>(() => {});
 
   // Keep phaseRef in sync with phase state
   useEffect(() => { phaseRef.current = phase; }, [phase]);
-
-  // ── Polling ─────────────────────────────────────────────────────────────────
-  function startPolling(ms: number) {
-    if (pollInterval.current) clearInterval(pollInterval.current);
-    pollInterval.current = setInterval(async () => {
-      try {
-        const { battle: b } = await api.getBattle(code);
-        handleBattleUpdate(b);
-      } catch { /* ignore transient errors */ }
-    }, ms);
-  }
 
   function handleBattleUpdate(b: BattleDoc) {
     setBattle((prev) => {
@@ -86,8 +82,12 @@ function BattlePage() {
     // Update phase based on battle status
     if (b.status === 'finished') {
       setPhase('finished');
-      if (pollInterval.current) clearInterval(pollInterval.current);
+      evtSource.current?.close();
     } else {
+      if (b.turnStartedAt) {
+        const elapsed = Math.floor((Date.now() - new Date(b.turnStartedAt).getTime()) / 1000);
+        setTimeLeft(Math.max(0, TURN_TIMEOUT_S - elapsed));
+      }
       const myState = b.players.find((p) => p.id === playerId);
       const hasActed = !!myState?.selectedAction;
       if (hasActed) {
@@ -100,17 +100,25 @@ function BattlePage() {
   }
 
   useEffect(() => {
-    // Initial fetch
-    api.getBattle(code).then(({ battle: b }) => {
-      prevLogLen.current = b.battleLog.length;
-      setBattle(b);
-      if (b.status === 'finished') {
-        setPhase('finished');
-      }
-    }).catch(() => {});
-
-    startPolling(1500);
-    return () => { if (pollInterval.current) clearInterval(pollInterval.current); };
+    let cancelled = false;
+    (async () => {
+      const token = await getToken();
+      if (cancelled || !token) return;
+      const url = `${API_BASE}/battle/${code}/events?token=${encodeURIComponent(token)}`;
+      const es = new EventSource(url);
+      evtSource.current = es;
+      es.addEventListener('battle', (e: MessageEvent) => {
+        const b: BattleDoc = JSON.parse(e.data);
+        if (prevLogLen.current === 0) prevLogLen.current = b.battleLog.length;
+        handleBattleUpdate(b);
+      });
+      es.onerror = () => { /* SSE auto-reconnects */ };
+    })();
+    return () => {
+      cancelled = true;
+      evtSource.current?.close();
+      evtSource.current = null;
+    };
   }, [code]);
 
   function triggerAnim(target: AnimTarget, type: AnimType) {
@@ -123,9 +131,6 @@ function BattlePage() {
     try {
       const { battle: updated } = await api.submitAction(code, playerId, action);
       handleBattleUpdate(updated);
-      // Speed up polling for one cycle
-      startPolling(500);
-      setTimeout(() => startPolling(1500), 2000);
       if (action.type === 'move') triggerAnim('me', 'flash');
     } catch (err) {
       setToast({ msg: err instanceof Error ? err.message : 'Action failed', kind: 'error' });
@@ -138,8 +143,38 @@ function BattlePage() {
   const oppState = battle?.players.find((p) => p.id !== playerId);
   const myActive = myState && getActive(battle!, playerId);
   const oppActive = oppState && getOppActive(battle!, playerId);
-  const canAct = phase === 'menu' && battle?.status === 'active';
-  const iWon = battle?.status === 'finished' && battle.winnerPlayerId === playerId;
+  const isSpectator = !!battle && !!userId && !battle.players.some(p => p.id === userId);
+  const canAct = !isSpectator && phase === 'menu' && battle?.status === 'active';
+  const iWon = !isSpectator && battle?.status === 'finished' && battle.winnerPlayerId === playerId;
+  const spectatorP1 = isSpectator ? battle?.players[0] : undefined;
+  const spectatorP2 = isSpectator ? battle?.players[1] : undefined;
+  const spectatorP1Active = spectatorP1
+    ? spectatorP1.team.find(p => p.instanceId === spectatorP1.activePokemonId) ?? null
+    : null;
+  const spectatorP2Active = spectatorP2
+    ? spectatorP2.team.find(p => p.instanceId === spectatorP2.activePokemonId) ?? null
+    : null;
+
+  // ── Turn timer ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    autoSubmitRef.current = () => {
+      if (!isSpectator && phaseRef.current === 'menu' && battle?.status === 'active' && myActive) {
+        const fallback = myActive.moves[0];
+        if (fallback) sendAction({ type: 'move', moveId: fallback.id });
+      }
+    };
+  });
+
+  useEffect(() => {
+    if (isSpectator || phase !== 'menu' || battle?.status !== 'active') return;
+    const id = setInterval(() => {
+      setTimeLeft((t) => {
+        if (t <= 1) { clearInterval(id); autoSubmitRef.current(); return 0; }
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [phase, battle?.status]);
 
   if (!battle) {
     return (
@@ -165,7 +200,12 @@ function BattlePage() {
     >
       {/* ── Victory / Defeat overlay ──────────────────────────────────────────── */}
       {phase === 'finished' && (
-        <VictoryOverlay won={iWon} winnerName={battle.winnerPlayerId === myState?.id ? myState?.id : oppState?.id} />
+        <VictoryOverlay
+          won={iWon}
+          isSpectator={isSpectator}
+          winnerPlayerId={battle.winnerPlayerId}
+          players={battle.players}
+        />
       )}
 
       {/* ── Top: opponent info ───────────────────────────────────────────────── */}
@@ -205,8 +245,8 @@ function BattlePage() {
         {/* My sprite (bottom-left) */}
         <div style={{ position: 'absolute', bottom: '10px', left: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <PokemonSprite
-            spriteUrl={myActive?.spriteUrl ?? ''}
-            name={myActive?.name ?? ''}
+            spriteUrl={(isSpectator ? spectatorP2Active : myActive)?.spriteUrl ?? ''}
+            name={(isSpectator ? spectatorP2Active : myActive)?.name ?? ''}
             size="lg"
             animating={anim?.target === 'me' ? anim.type : null}
             isBack
@@ -227,14 +267,21 @@ function BattlePage() {
           }}
         >
           Turn {battle.turn}
+          {phase === 'menu' && battle.status === 'active' && (
+            <div style={{ color: timeLeft <= 10 ? '#e84028' : '#5b4a5e', marginTop: '2px' }}>
+              {timeLeft}s
+            </div>
+          )}
         </div>
       </div>
 
       {/* ── My Pokémon info ───────────────────────────────────────────────────── */}
       <div style={{ padding: '0 16px', flexShrink: 0 }}>
-        {myState && myActive && (
+        {isSpectator && spectatorP2 && spectatorP2Active ? (
+          <MyInfo pokemon={spectatorP2Active} player={spectatorP2} />
+        ) : myState && myActive ? (
           <MyInfo pokemon={myActive} player={myState} />
-        )}
+        ) : null}
       </div>
 
       {/* ── Battle log ───────────────────────────────────────────────────────── */}
@@ -244,7 +291,9 @@ function BattlePage() {
 
       {/* ── Action panel ─────────────────────────────────────────────────────── */}
       <div style={{ padding: '8px 16px 16px', flexShrink: 0 }}>
-        {phase === 'finished' ? null : phase === 'switch' ? (
+        {isSpectator ? (
+          <SpectatorPanel />
+        ) : phase === 'finished' ? null : phase === 'switch' ? (
           <SwitchMenu
             player={myState!}
             canAct={canAct}
@@ -518,6 +567,28 @@ function SwitchMenu({
   );
 }
 
+function SpectatorPanel() {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '12px',
+        padding: '16px',
+        background: '#14101a',
+        border: '3px solid #2a1f2e',
+        borderRadius: '4px',
+      }}
+    >
+      <span style={{ fontSize: '18px' }}>👁</span>
+      <span style={{ fontFamily: "'VT323', monospace", fontSize: '22px', color: '#5b4a5e', letterSpacing: '0.04em' }}>
+        Spectating — read only
+      </span>
+    </div>
+  );
+}
+
 function WaitingPanel() {
   return (
     <div
@@ -550,7 +621,20 @@ function WaitingPanel() {
   );
 }
 
-function VictoryOverlay({ won, winnerName }: { won: boolean; winnerName?: string }) {
+function VictoryOverlay({ won, isSpectator, winnerPlayerId, players }: {
+  won: boolean;
+  isSpectator: boolean;
+  winnerPlayerId?: string;
+  players: BattlePlayerState[];
+}) {
+  const headingColor = isSpectator ? '#f8efd1' : won ? '#f8b830' : '#e84028';
+  const emoji = isSpectator ? '👁' : won ? '🏆' : '😔';
+  const heading = isSpectator ? 'BATTLE OVER!' : won ? 'YOU WIN!' : 'YOU LOSE!';
+  const sub = isSpectator
+    ? `Winner: Player ${(players.findIndex(p => p.id === winnerPlayerId) + 1) || '?'}`
+    : won
+    ? 'All opponent Pokémon have fainted!'
+    : 'All your Pokémon have fainted...';
   return (
     <div
       style={{
@@ -566,19 +650,19 @@ function VictoryOverlay({ won, winnerName }: { won: boolean; winnerName?: string
         padding: '24px',
       }}
     >
-      <div style={{ fontSize: '64px', lineHeight: 1 }}>{won ? '🏆' : '😔'}</div>
+      <div style={{ fontSize: '64px', lineHeight: 1 }}>{emoji}</div>
       <h2
         style={{
           fontFamily: "'Press Start 2P', monospace",
           fontSize: '18px',
-          color: won ? '#f8b830' : '#e84028',
+          color: headingColor,
           textAlign: 'center',
           letterSpacing: '0.06em',
           textShadow: '3px 3px 0 #14101a',
           margin: 0,
         }}
       >
-        {won ? 'YOU WIN!' : 'YOU LOSE!'}
+        {heading}
       </h2>
       <p
         style={{
@@ -589,9 +673,7 @@ function VictoryOverlay({ won, winnerName }: { won: boolean; winnerName?: string
           margin: 0,
         }}
       >
-        {won
-          ? 'All opponent Pokémon have fainted!'
-          : 'All your Pokémon have fainted...'}
+        {sub}
       </p>
       <a
         href="/"

@@ -156,6 +156,7 @@ export interface BattleDoc {
   players: BattlePlayerState[];
   battleLog: string[];
   winnerPlayerId?: string;
+  turnStartedAt?: string;
 }
 
 // ─── API Response Types ────────────────────────────────────────────────────
