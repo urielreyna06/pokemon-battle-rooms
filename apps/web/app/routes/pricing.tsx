@@ -4,7 +4,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { createCheckoutSession, getSubscriptionStatus } from '../lib/api';
 import { useSubscription } from '../hooks/useSubscription';
 
-export const Route = createFileRoute('/pricing')();
+export const Route = createFileRoute('/pricing')({ component: PricingPage });
 
 function PricingPage() {
   const { isSignedIn, getToken } = useAuth();

@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router';
 import { useSubscription } from '../hooks/useSubscription';
 
 export function SubscriptionStatus() {
@@ -7,9 +8,17 @@ export function SubscriptionStatus() {
     return <span className="subscription-status loading">Loading...</span>;
   }
 
+  if (isShinySubscriber) {
+    return (
+      <Link to="/pricing" className="subscription-status active" style={{ textDecoration: 'none' }}>
+        ✨ Shiny Subscriber
+      </Link>
+    );
+  }
+
   return (
-    <span className={`subscription-status ${isShinySubscriber ? 'active' : 'inactive'}`}>
-      {isShinySubscriber ? '✨ Shiny Subscriber' : 'Free Plan'}
-    </span>
+    <Link to="/pricing" className="subscription-status inactive" style={{ textDecoration: 'none' }}>
+      Free Plan ▶
+    </Link>
   );
 }

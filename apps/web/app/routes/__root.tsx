@@ -5,6 +5,7 @@ import { createRootRoute, Outlet } from '@tanstack/react-router';
 import { SignedIn, SignedOut, SignInButton, UserButton, useAuth } from '@clerk/react';
 import { SubscriptionContext } from '../lib/SubscriptionContext';
 import { useSubscription } from '../hooks/useSubscription';
+import { SubscriptionStatus } from '../components/SubscriptionStatus';
 
 // ── Auth gate — shown while Clerk is loading or user is signed out ─────────
 function AuthGate() {
@@ -113,10 +114,11 @@ function RootLayout() {
       <header
         style={{
           position: 'fixed', top: 0, right: 0, zIndex: 1000,
-          padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8,
+          padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 10,
         }}
       >
         <SignedIn>
+          <SubscriptionStatus />
           <UserButton afterSignOutUrl="/" />
         </SignedIn>
       </header>
