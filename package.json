@@ -18,7 +18,7 @@
   },
   "lint-staged": {
     "apps/api/**/*.ts": [
-      "bun run --cwd apps/api test"
+      "bash -c 'bun run --cwd apps/api test'"
     ]
   }
 }
