@@ -130,6 +130,15 @@ VITE_API_URL=http://localhost:3001
 
 Do NOT add an `overrides` for `@clerk/shared@4.x` — it breaks `useSessionContext`.
 
+### lint-staged passes staged file paths to vitest
+By default lint-staged appends the matched file paths as CLI arguments to whatever command you specify. Vitest treats those as a file filter and exits with "No test files found" when only source files (not test files) are staged. Fixed by wrapping the command in `bash -c` so the appended args are discarded:
+```json
+"lint-staged": {
+  "apps/api/**/*.ts": ["bash -c 'bun run --cwd apps/api test'"]
+}
+```
+Do NOT revert to the bare `bun run --cwd apps/api test` form — it will break every commit that stages a non-test `.ts` file.
+
 ### Web host port
 The web container runs on 3000 internally (nginx). Host port is mapped to **3002** in `docker-compose.yml` to avoid conflict with `open-webui` which already holds `127.0.0.1:3000`. Frontend is at `http://localhost:3002`.
 
