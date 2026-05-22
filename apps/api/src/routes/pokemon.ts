@@ -18,22 +18,28 @@ async function getShinyUnlocked(db: Awaited<ReturnType<typeof getDb>>, userId: s
 export const pokemonRoutes = new Hono<AuthEnv>();
 pokemonRoutes.use("*", requireAuth);
 
-// GET /pokemon?limit=20&offset=0
+// GET /pokemon?limit=20&offset=0&name=bulba&type=fire
 pokemonRoutes.get("/", async (c) => {
   try {
     const db = await getDb();
     const limit = Math.min(Number(c.req.query("limit") ?? 20), 100);
     const offset = Number(c.req.query("offset") ?? 0);
+    const nameQuery = c.req.query("name")?.trim().toLowerCase();
+    const typeQuery = c.req.query("type")?.trim().toLowerCase();
+
+    const filter: Record<string, unknown> = {};
+    if (nameQuery) filter["name"] = { $regex: nameQuery, $options: "i" };
+    if (typeQuery) filter["types"] = typeQuery;
 
     const [pokemon, total, shinyUnlocked] = await Promise.all([
       db
         .collection<PokemonDoc>("pokemon")
-        .find({})
+        .find(filter)
         .skip(offset)
         .limit(limit)
         .project({ _id: 0 })
         .toArray(),
-      db.collection<PokemonDoc>("pokemon").countDocuments(),
+      db.collection<PokemonDoc>("pokemon").countDocuments(filter),
       getShinyUnlocked(db, c.get("userId")),
     ]);
 

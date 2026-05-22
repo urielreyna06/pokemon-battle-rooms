@@ -29,6 +29,7 @@ function TeamSelectPage() {
   const [submitting, setSubmitting] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   const [toast, setToast] = useState<ToastState>(null);
 
   // Once confirmed, poll until battle starts
@@ -51,12 +52,19 @@ function TeamSelectPage() {
     return () => clearInterval(timer);
   }, [confirmed, code, navigate]);
 
-  useEffect(() => { loadPokemon(0); }, []);
+  useEffect(() => {
+    loadPokemon(0);
+  }, [search, typeFilter]);
 
   async function loadPokemon(newOffset: number) {
     setLoading(true);
     try {
-      const data = await api.getPokemon(PAGE_SIZE, newOffset);
+      const data = await api.getPokemon(
+        PAGE_SIZE,
+        newOffset,
+        search.trim() || undefined,
+        typeFilter || undefined
+      );
       setAllPokemon((prev) => newOffset === 0 ? data.pokemon : [...prev, ...data.pokemon]);
       setTotal(data.total);
       setOffset(newOffset + PAGE_SIZE);
@@ -94,9 +102,7 @@ function TeamSelectPage() {
     }
   }
 
-  const filtered = search.trim()
-    ? allPokemon.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
-    : allPokemon;
+  const filtered = allPokemon;
 
   const selectedPokemon = allPokemon.filter((p) => selected.includes(p.pokedexId));
 
@@ -263,13 +269,59 @@ function TeamSelectPage() {
             fontFamily: "'VT323', monospace",
             fontSize: '20px',
             outline: 'none',
-            marginBottom: '16px',
+            marginBottom: '12px',
             boxSizing: 'border-box',
           }}
           placeholder="Search Pokémon..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+
+        {/* Type filter chips */}
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ fontFamily: "'VT323', monospace", fontSize: '14px', color: '#5b4a5e', marginBottom: '8px' }}>
+            Types:
+          </div>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setTypeFilter('')}
+              style={{
+                background: typeFilter === '' ? '#e84028' : '#2a1f2e',
+                color: typeFilter === '' ? '#fff' : '#f0e8d0',
+                border: '2px solid #14101a',
+                borderRadius: '4px',
+                padding: '6px 12px',
+                fontFamily: "'VT323', monospace",
+                fontSize: '12px',
+                cursor: 'pointer',
+                textTransform: 'capitalize',
+                transition: 'all 0.1s',
+              }}
+            >
+              All
+            </button>
+            {['normal', 'fire', 'water', 'electric', 'grass', 'ice', 'fighting', 'poison', 'ground', 'flying', 'psychic', 'bug', 'rock', 'ghost', 'dragon', 'dark', 'steel', 'fairy'].map((type) => (
+              <button
+                key={type}
+                onClick={() => setTypeFilter(typeFilter === type ? '' : type)}
+                style={{
+                  background: typeFilter === type ? '#e84028' : '#2a1f2e',
+                  color: typeFilter === type ? '#fff' : '#f0e8d0',
+                  border: '2px solid #14101a',
+                  borderRadius: '4px',
+                  padding: '6px 12px',
+                  fontFamily: "'VT323', monospace",
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  textTransform: 'capitalize',
+                  transition: 'all 0.1s',
+                }}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Pokémon grid */}
         <div
@@ -352,7 +404,7 @@ function TeamSelectPage() {
         </div>
 
         {/* Load more */}
-        {offset < total && !search && (
+        {offset < total && !search && !typeFilter && (
           <div style={{ textAlign: 'center', marginTop: '16px' }}>
             <button
               onClick={() => loadPokemon(offset)}

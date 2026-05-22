@@ -57,10 +57,18 @@ export async function setReady(
 
 export async function getPokemonCatalog(
   limit = 50,
-  offset = 0
+  offset = 0,
+  name?: string,
+  type?: string
 ): Promise<{ pokemon: CatalogPokemon[]; total: number }> {
+  const params = new URLSearchParams();
+  params.append('limit', String(limit));
+  params.append('offset', String(offset));
+  if (name) params.append('name', name);
+  if (type) params.append('type', type);
+
   return apiFetch<{ pokemon: CatalogPokemon[]; total: number }>(
-    `/pokemon?limit=${limit}&offset=${offset}`
+    `/pokemon?${params.toString()}`
   );
 }
 
