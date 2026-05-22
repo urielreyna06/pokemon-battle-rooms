@@ -37,3 +37,6 @@ mongo_data/
 
 # Test coverage
 coverage/
+
+# Local learning/architecture notes (personal reference, not part of the public repo)
+ARCHITECTURE.md

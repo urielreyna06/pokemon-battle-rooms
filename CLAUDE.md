@@ -27,7 +27,7 @@ apps/
   api/src/
     middleware/requireAuth.ts   ← Clerk JWT verification, sets userId in context
     routes/rooms.ts             ← POST /rooms, POST /rooms/:code/join, GET /rooms/:code
-    routes/battle.ts            ← GET /battle/:roomCode, POST /battle/:roomCode/action
+    routes/battle.ts            ← GET /battle/:roomCode, GET /battle/:roomCode/events (SSE), POST /battle/:roomCode/action
     routes/pokemon.ts           ← GET /pokemon, GET /pokemon/:id (shiny-aware)
     routes/users.ts             ← GET /users/me
     routes/stripe.ts            ← POST /stripe/create-checkout-session, GET /stripe/subscription-status
@@ -41,11 +41,12 @@ apps/
     subscription.test.ts
     battle-no-regression.test.ts
     stripe-webhook.test.ts
+    pricing-flow.test.ts         ← full subscription lifecycle (none→active→past_due→canceled)
   web/app/
     routes/index.tsx            ← Home (create/join room)
     routes/lobby.$code.tsx      ← Lobby + ready-up
     routes/team.$code.tsx       ← Team selection
-    routes/battle.$code.tsx     ← Battle UI (polling every 1.5s)
+    routes/battle.$code.tsx     ← Battle UI (SSE real-time + 60s turn timer)
     routes/pricing.tsx          ← Stripe checkout page
     components/SubscriptionStatus.tsx
     hooks/useSubscription.ts
@@ -155,18 +156,48 @@ bun run dev:web      # port 3000
 stripe listen --forward-to localhost:3001/webhooks/stripe
 ```
 
-## Pending work (as of 2026-05-21)
+## SSE real-time battle updates
+
+`GET /battle/:roomCode/events` streams `event: battle` (full `BattleDoc` JSON) via Hono `streamSSE`.
+- Auth: `requireAuth` middleware accepts `?token=<clerk-jwt>` query param because `EventSource` cannot set headers.
+- Event bus: `src/battleEventBus.ts` — in-memory `EventEmitter`, safe for single-process Docker.
+- `emitBattleUpdate(roomCode)` is called in `POST /battle/:roomCode/action` after action registration and after turn resolution.
+- Keepalive: `event: ping` sent every 20s; client ignores it.
+- Frontend (`battle.$code.tsx`): opens `EventSource` on mount, closes on unmount / battle finished.
+
+## Turn timer
+
+- `BattleDoc.turnStartedAt?: string` (ISO) — set in `initializeBattle` and reset each time `battle.turn` increments.
+- Frontend syncs `timeLeft` from `turnStartedAt` on every SSE event to prevent drift.
+- At 0s, auto-submits the first available move via `autoSubmitRef` (ref pattern avoids stale closure).
+- Timer display lives in the turn counter; turns red when ≤ 10s.
+
+## Status (as of 2026-05-22)
+
+All core features are implemented and the Docker stack is confirmed healthy:
+- `docker compose up --build -d` → all containers running (mongo healthy, api on 3001, web/nginx on 3002)
+- API: MongoDB connected, 292 Pokémon in DB
+- Web SPA: serving at `http://localhost:3002` with no build or runtime errors
+
+### Completed
 
 - [x] Run `bun install` after adding stripe/svix/husky/lint-staged deps
-- [x] All 28 Vitest tests passing (auth, subscription, battle-no-regression, stripe-webhook)
+- [x] All 34 Vitest tests passing (auth, subscription, battle-no-regression, stripe-webhook, pricing-flow)
 - [x] Docker stack fully building and running (`docker compose up --build`)
 - [x] API health: `http://localhost:3001/health` → 292 Pokémon in DB
 - [x] Web SPA serving at `http://localhost:3002`
 - [x] Repo pushed to https://github.com/urielreyna06/pokemon-battle-rooms
-- [ ] Run `bun run prepare` in repo root to initialize Husky pre-commit hook
-- [ ] Wire `SubscriptionStatus` component into `apps/web/app/routes/__root.tsx` main nav
-- [ ] E2E tests for the pricing/subscription flow
-- [ ] Real-time battle updates (currently polling every 1.5s — consider WebSocket/SSE)
-- [ ] Turn timer (currently no limit; a player can stall indefinitely)
-- [ ] Spectator mode
+- [x] Husky pre-commit hook initialized (`bun run prepare` done)
+- [x] `SubscriptionStatus` component wired into `__root.tsx` main nav
+- [x] E2E / integration tests for pricing/subscription flow (`pricing-flow.test.ts`)
+- [x] Real-time battle updates — SSE replaces 1.5s polling
+- [x] Turn timer — 60s limit, auto-submits first move on expiry
+- [x] Spectator mode (frontend-only; SSE already open to any authenticated user; isSpectator guard on timer/autoSubmit; SpectatorPanel + VictoryOverlay spectator path)
+- [x] Turn order by move priority + speed — switches first, then `move.priority` desc, then effective speed desc (paralysis halves speed), coin flip for exact ties (`battleEngine.ts:processTurn`)
+- [x] `getTypeMultiplier` optimized — single DB query per move (was N queries for dual-type defenders)
+- [x] Pokémon catalog filters — `GET /pokemon?name=&type=` backend query params; type filter chips + name search wired server-side in `team.$code.tsx`
+
+### Remaining
+
 - [ ] Revoke/rotate GitHub tokens shared in session (PAT + 2 classic tokens for urielreyna06)
+- [ ] End-to-end browser smoke test: create room → join → select team → battle → confirm shiny gate works
