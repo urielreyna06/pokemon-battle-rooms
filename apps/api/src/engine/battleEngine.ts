@@ -80,14 +80,14 @@ async function getTypeMultiplier(
   moveType: string,
   defenderTypes: string[]
 ): Promise<number> {
+  const rel = await db
+    .collection<TypeRelationDoc>("type_relations")
+    .findOne({ type: moveType });
+
+  if (!rel) return 1;
+
   let multiplier = 1;
   for (const defType of defenderTypes) {
-    const rel = await db
-      .collection<TypeRelationDoc>("type_relations")
-      .findOne({ type: moveType });
-
-    if (!rel) continue;
-
     if (rel.noDamageTo.includes(defType)) {
       multiplier *= 0;
     } else if (rel.doubleDamageTo.includes(defType)) {
@@ -345,6 +345,7 @@ export async function initializeBattle(
     players,
     battleLog: ["⚔️  The battle has begun!"],
     winnerPlayerId: undefined,
+    turnStartedAt: new Date().toISOString(),
   };
 
   await db.collection<BattleDoc>("battles").insertOne(battle as any);
@@ -359,8 +360,35 @@ export async function processTurn(
 ): Promise<BattleDoc> {
   const log: string[] = [];
 
-  // Determine action order (coin flip for MVP)
-  const order = [...battle.players].sort(() => Math.random() - 0.5);
+  // Determine action order: switches first, then by move priority, then by speed, then coin flip
+  const order = [...battle.players].sort((a, b) => {
+    const aIsSwitch = a.selectedAction?.type === 'switch';
+    const bIsSwitch = b.selectedAction?.type === 'switch';
+    if (aIsSwitch && !bIsSwitch) return -1;
+    if (!aIsSwitch && bIsSwitch) return 1;
+
+    if (!aIsSwitch && !bIsSwitch) {
+      const aActive = a.team.find(p => p.instanceId === a.activePokemonId);
+      const bActive = b.team.find(p => p.instanceId === b.activePokemonId);
+      const aMove = a.selectedAction?.type === 'move'
+        ? aActive?.moves.find(m => m.id === (a.selectedAction as any).moveId)
+        : null;
+      const bMove = b.selectedAction?.type === 'move'
+        ? bActive?.moves.find(m => m.id === (b.selectedAction as any).moveId)
+        : null;
+      const aPriority = aMove?.priority ?? 0;
+      const bPriority = bMove?.priority ?? 0;
+      if (aPriority !== bPriority) return bPriority - aPriority;
+
+      const aSpd = aActive ? effectiveStat(aActive.stats.speed, aActive.stages.speed) : 0;
+      const bSpd = bActive ? effectiveStat(bActive.stats.speed, bActive.stages.speed) : 0;
+      const aEffSpd = aActive && isParalyzed(aActive) ? Math.floor(aSpd / 2) : aSpd;
+      const bEffSpd = bActive && isParalyzed(bActive) ? Math.floor(bSpd / 2) : bSpd;
+      if (aEffSpd !== bEffSpd) return bEffSpd - aEffSpd;
+    }
+
+    return Math.random() - 0.5;
+  });
 
   for (const actingPlayer of order) {
     const opponent = battle.players.find((p) => p.id !== actingPlayer.id)!;
@@ -504,6 +532,7 @@ export async function processTurn(
 
   battle.battleLog = [...battle.battleLog, ...log].slice(-50); // Keep last 50 entries
   battle.turn += 1;
+  battle.turnStartedAt = new Date().toISOString();
 
   // Check for victory
   const winnerId = checkVictory(battle);
