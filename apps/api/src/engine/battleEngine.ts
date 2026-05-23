@@ -23,6 +23,10 @@ import type {
 
 const LEVEL = 50;
 
+// Module-level cache: populated on first lookup per type, then reused.
+// Only 18 Pokémon types exist so this reaches 100% hit rate quickly.
+const typeRelationsCache = new Map<string, TypeRelationDoc | null>();
+
 // ─── Stat calculation ─────────────────────────────────────────────────────
 
 function randomIV(): number {
@@ -80,9 +84,11 @@ async function getTypeMultiplier(
   moveType: string,
   defenderTypes: string[]
 ): Promise<number> {
-  const rel = await db
-    .collection<TypeRelationDoc>("type_relations")
-    .findOne({ type: moveType });
+  let rel: TypeRelationDoc | null | undefined = typeRelationsCache.get(moveType);
+  if (rel === undefined) {
+    rel = await db.collection<TypeRelationDoc>("type_relations").findOne({ type: moveType });
+    typeRelationsCache.set(moveType, rel);
+  }
 
   if (!rel) return 1;
 
