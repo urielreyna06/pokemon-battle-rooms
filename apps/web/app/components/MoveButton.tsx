@@ -27,8 +27,15 @@ export function MoveButton({ move, disabled = false, selected = false, onClick }
     <button
       onClick={onClick}
       disabled={disabled}
-      className="relative w-full flex flex-col items-start gap-1 p-2 text-left"
       style={{
+        position: 'relative',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        gap: '4px',
+        padding: '8px',
+        textAlign: 'left',
         background: disabled ? '#3a2a3a' : isActive ? '#fff' : c.bg,
         color: disabled ? '#5b4a5e' : isActive ? c.bg : c.text,
         border: isActive ? `2px solid ${c.bg}` : '2px solid #14101a',

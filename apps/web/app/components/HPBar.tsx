@@ -26,13 +26,20 @@ export function HPBar({
       ? 'linear-gradient(90deg, #f39c12, #e67e22)'
       : 'linear-gradient(90deg, #e74c3c, #c0392b)';
 
+  const barGlow =
+    pct > 50
+      ? 'inset 0 2px 0 rgba(255,255,255,0.35), 0 0 8px rgba(46,204,113,0.6)'
+      : pct > 20
+      ? 'inset 0 2px 0 rgba(255,255,255,0.35), 0 0 8px rgba(243,156,18,0.6)'
+      : 'inset 0 2px 0 rgba(255,255,255,0.35), 0 0 8px rgba(231,76,60,0.8)';
+
   return (
     <div style={{ width }}>
-      <div className="flex items-center gap-2">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span className="hp-label">HP</span>
         <div
-          className="flex-1"
           style={{
+            flex: 1,
             height: '18px',
             borderRadius: '9px',
             background: '#0a0818',
@@ -48,28 +55,38 @@ export function HPBar({
               background: gradient,
               borderRadius: '9px',
               transition: 'width 0.4s ease, background 0.4s ease',
-              boxShadow: pct > 50
-                ? 'inset 0 2px 0 rgba(255,255,255,0.35), 0 0 8px rgba(46,204,113,0.6)'
-                : pct > 20
-                ? 'inset 0 2px 0 rgba(255,255,255,0.35), 0 0 8px rgba(243,156,18,0.6)'
-                : 'inset 0 2px 0 rgba(255,255,255,0.35), 0 0 8px rgba(231,76,60,0.8)',
+              boxShadow: barGlow,
             }}
           />
         </div>
       </div>
       {showNumeric && (
         <div
-          className="mt-1.5 text-right font-pixel-body text-[20px] leading-none tabular-nums"
-          style={{ color: '#d0c8e0' }}
+          style={{
+            marginTop: '6px',
+            textAlign: 'right',
+            fontFamily: "'VT323', monospace",
+            fontSize: '20px',
+            lineHeight: 1,
+            color: '#d0c8e0',
+          }}
         >
           {Math.max(0, Math.round(current))}
           <span style={{ color: '#7a6a8a' }}>/{max}</span>
         </div>
       )}
       {showExp && (
-        <div className="mt-1.5 flex items-center gap-2">
-          <span className="font-pixel text-[8px]" style={{ color: '#5b4a5e' }}>EXP</span>
-          <div className="flex-1 xp-track">
+        <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span
+            style={{
+              fontFamily: "'Press Start 2P', monospace",
+              fontSize: '8px',
+              color: '#5b4a5e',
+            }}
+          >
+            EXP
+          </span>
+          <div className="flex-1 xp-track" style={{ flex: 1 }}>
             <div className="xp-fill" style={{ width: `${expPct}%` }} />
           </div>
         </div>

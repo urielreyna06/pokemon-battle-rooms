@@ -48,10 +48,40 @@ export const routeTree = rootTree;
 
 declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    "/": { preLoaderRoute: typeof IndexRoute; parentRoute: typeof rootRoute };
-    "/lobby/$code": { preLoaderRoute: typeof LobbyCodeRoute; parentRoute: typeof rootRoute };
-    "/team/$code": { preLoaderRoute: typeof TeamCodeRoute; parentRoute: typeof rootRoute };
-    "/battle/$code": { preLoaderRoute: typeof BattleCodeRoute; parentRoute: typeof rootRoute };
-    "/pricing": { preLoaderRoute: typeof PricingRoute; parentRoute: typeof rootRoute };
+    "/": {
+      id: "/";
+      path: "/";
+      fullPath: "/";
+      preLoaderRoute: typeof IndexRoute;
+      parentRoute: typeof rootRoute;
+    };
+    "/lobby/$code": {
+      id: "/lobby/$code";
+      path: "/lobby/$code";
+      fullPath: "/lobby/$code";
+      preLoaderRoute: typeof LobbyCodeRoute;
+      parentRoute: typeof rootRoute;
+    };
+    "/team/$code": {
+      id: "/team/$code";
+      path: "/team/$code";
+      fullPath: "/team/$code";
+      preLoaderRoute: typeof TeamCodeRoute;
+      parentRoute: typeof rootRoute;
+    };
+    "/battle/$code": {
+      id: "/battle/$code";
+      path: "/battle/$code";
+      fullPath: "/battle/$code";
+      preLoaderRoute: typeof BattleCodeRoute;
+      parentRoute: typeof rootRoute;
+    };
+    "/pricing": {
+      id: "/pricing";
+      path: "/pricing";
+      fullPath: "/pricing";
+      preLoaderRoute: typeof PricingRoute;
+      parentRoute: typeof rootRoute;
+    };
   }
 }

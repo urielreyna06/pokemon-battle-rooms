@@ -13,8 +13,15 @@ export function StatusBadge({ status, remainingTurns }: StatusBadgeProps) {
 
   return (
     <span
-      className="inline-flex items-center gap-1 font-pixel uppercase rounded-[3px] text-[8px] px-1.5 py-[2px]"
       style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+        fontFamily: "'Press Start 2P', monospace",
+        textTransform: 'uppercase',
+        borderRadius: '3px',
+        fontSize: '8px',
+        padding: '2px 6px',
         background: meta.bg,
         color: '#fff',
         border: '2px solid #14101a',
