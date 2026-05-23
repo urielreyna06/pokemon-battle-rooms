@@ -142,6 +142,12 @@ By default lint-staged appends the matched file paths as CLI arguments to whatev
 ```
 Do NOT revert to the bare `bun run --cwd apps/api test` form — it will break every commit that stages a non-test `.ts` file.
 
+### `vite/client.d.ts` missing in Bun workspace
+`"types": ["vite/client"]` in `apps/web/tsconfig.json` causes `TS2688: Cannot find type definition file for 'vite/client'` because the Bun workspace partial install only puts `dist/`, `bin/`, and `types/package.json` under `node_modules/vite/` — the `client.d.ts` file is absent. Fixed by removing the entry from `tsconfig.json` and creating `apps/web/app/vite-env.d.ts` with manual `ImportMeta` and `ImportMetaEnv` interface declarations. Do NOT re-add `"types": ["vite/client"]`.
+
+### `routeTree.gen.ts` — `FileRoutesByPath` must include `id`/`path`/`fullPath`
+TanStack Router v1 resolves `Route.useParams()` types via `ParsePathParams<FileRoutesByPath[path]['id']>`. If `id`, `path`, and `fullPath` are absent from the `declare module` augmentation, the hook returns `{}` instead of `{ code: string }`. The auto-generator always emits all three fields; since `routeTree.gen.ts` is manually maintained here, these must be added by hand when adding new routes.
+
 ### Web host port
 The web container runs on 3000 internally (nginx). Host port is mapped to **3002** in `docker-compose.yml` to avoid conflict with `open-webui` which already holds `127.0.0.1:3000`. Frontend is at `http://localhost:3002`.
 
@@ -157,6 +163,7 @@ docker compose --profile import run --rm importer
 # Run API tests  — MUST use bun run test, NOT bun test
 # bun test → Bun's native runner (no vi.mock support, tests break)
 # bun run test → invokes vitest run via package.json script (correct)
+# 108 tests across 10 files — all should be green
 cd apps/api && bun run test
 bun run test:coverage    # must stay ≥80%
 
@@ -187,17 +194,18 @@ cd /tmp/smoke-runner && LD_LIBRARY_PATH=/tmp/libs2/extracted/usr/lib/x86_64-linu
 - At 0s, auto-submits the first available move via `autoSubmitRef` (ref pattern avoids stale closure).
 - Timer display lives in the turn counter; turns red when ≤ 10s.
 
-## Status (as of 2026-05-22)
+## Status (as of 2026-05-23)
 
 All core features are implemented and the Docker stack is confirmed healthy:
 - `docker compose up --build -d` → all containers running (mongo healthy, api on 3001, web/nginx on 3002)
 - API: MongoDB connected, Pokémon in DB
 - Web SPA: serving at `http://localhost:3002` with no build or runtime errors
+- TypeScript: `tsc --noEmit` clean (0 errors) across all packages
 
 ### Completed
 
 - [x] Run `bun install` after adding stripe/svix/husky/lint-staged deps
-- [x] All 74 Vitest tests passing (8 test files, all green)
+- [x] All 108 Vitest tests passing (10 test files, all green)
 - [x] Docker stack fully building and running (`docker compose up --build`)
 - [x] API health: `http://localhost:3001/health` → Pokémon in DB
 - [x] Web SPA serving at `http://localhost:3002`
@@ -234,6 +242,11 @@ All core features are implemented and the Docker stack is confirmed healthy:
 - [x] Stripe success_url port fix — `docker-compose.yml` `CLIENT_URL` default changed `:3000` → `:3002`; `pricing.tsx` polls `/users/me` every 2 s (up to 30 s) on `?success=true`, showing "Activating…" until webhook confirms `shinyUnlocked`
 - [x] Type-effectiveness cache — `typeRelationsCache: Map<string, TypeRelationDoc | null>` in `battleEngine.ts`; eliminates per-damage-calc DB query; 18 Pokémon types reach 100% cache hit rate within first few turns
 - [x] Architecture evaluation — `ARCHITECTURE.md` section 16: 7.2/10 score, file-level findings (battleEngine 632 lines, battle.$code.tsx 921 lines), applied improvements, ranked next steps
+- [x] Fixed `Route.useParams()` param inference — added `id`/`path`/`fullPath` to `FileRoutesByPath` in `routeTree.gen.ts`; TanStack Router resolves params via `ParsePathParams<id>`, so without `id` the type defaults to `{}` for all `$code` routes
+- [x] Fixed TypeScript strict errors — created `apps/web/app/vite-env.d.ts` with manual `ImportMeta`/`ImportMetaEnv` declarations; removed broken `"types": ["vite/client"]` from `tsconfig.json` (Bun workspace partial install has no `vite/client.d.ts`)
+- [x] All Tailwind `className` replaced with inline styles in `TypeBadge`, `HPBar`, `MoveButton`, `StatusBadge` — Tailwind is not configured in `vite.config.ts` so utility classes produce no CSS
+- [x] Pricing page CSS classes added to `styles.css` (`pricing-page`, `pricing-card`, `subscription-status`, etc.)
+- [x] `tsc --noEmit` clean — 0 errors across all packages
 
 ### Remaining
 
