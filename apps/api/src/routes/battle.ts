@@ -94,7 +94,7 @@ battleRoutes.post("/:roomCode/forfeit", async (c) => {
     await db.collection<BattleDoc>("battles").updateOne(
       { roomCode },
       {
-        $set: { status: "finished" as const, winnerPlayerId },
+        $set: { status: "finished" as const, winnerPlayerId, endReason: "forfeit" as const },
         $push: { battleLog: `${activeName} forfeited the battle!` },
       }
     );

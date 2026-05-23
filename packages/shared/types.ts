@@ -23,6 +23,7 @@ export interface MoveDoc {
   type: string;
   power: number | null;
   accuracy: number | null;
+  pp?: number;
   priority: number;
   damageClass: "physical" | "special" | "status";
   effect: string;
@@ -80,6 +81,7 @@ export interface BattleMove {
   damageClass: "physical" | "special" | "status";
   effect: string;
   pp?: number;
+  currentPp: number;
 }
 
 export interface BattlePokemonStats {
@@ -157,6 +159,7 @@ export interface BattleDoc {
   players: BattlePlayerState[];
   battleLog: string[];
   winnerPlayerId?: string;
+  endReason?: 'ko' | 'forfeit';
   turnStartedAt?: string;
 }
 

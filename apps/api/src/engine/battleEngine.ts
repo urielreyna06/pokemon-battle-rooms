@@ -308,6 +308,8 @@ export async function initializeBattle(
           priority: moveDoc.priority,
           damageClass: moveDoc.damageClass,
           effect: moveDoc.effect,
+          pp: moveDoc.pp ?? 35,
+          currentPp: moveDoc.pp ?? 35,
         });
       }
 
@@ -455,6 +457,7 @@ export async function processTurn(
         continue;
       }
 
+      move.currentPp = Math.max(0, move.currentPp - 1);
       log.push(`${activePokemon.name} used ${move.name}!`);
 
       // Accuracy check
@@ -545,7 +548,8 @@ export async function processTurn(
   if (winnerId) {
     battle.status = "finished";
     battle.winnerPlayerId = winnerId;
-    battle.battleLog.push(`🏆 Player ${winnerId} wins the battle!`);
+    battle.endReason = 'ko';
+    battle.battleLog.push(`Player ${winnerId} wins the battle!`);
   }
 
   // Persist updated battle state
@@ -583,12 +587,15 @@ export async function registerAction(
   }
 
   if (action.type === "move") {
-    const moveExists = activePokemon.moves.some((m) => m.id === action.moveId);
-    if (!moveExists) {
+    const move = activePokemon.moves.find((m) => m.id === action.moveId);
+    if (!move) {
       return {
         valid: false,
         error: `Move ${action.moveId} does not belong to ${activePokemon.name}`,
       };
+    }
+    if (move.currentPp <= 0) {
+      return { valid: false, error: `${move.name} has no PP left!` };
     }
   }
 
