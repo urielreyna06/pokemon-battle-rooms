@@ -1,22 +1,80 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth, SignInButton } from '@clerk/react';
 import { createFileRoute } from '@tanstack/react-router';
-import { createCheckoutSession, getSubscriptionStatus } from '../lib/api';
-import { useSubscription } from '../hooks/useSubscription';
+import { createCheckoutSession } from '../lib/api';
+import { useApi } from '../hooks/useApi';
 
 export const Route = createFileRoute('/pricing')({ component: PricingPage });
 
+const searchParams =
+  typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+const SUCCESS_PARAM = searchParams.get('success') === 'true';
+const CANCELED_PARAM = searchParams.get('canceled') === 'true';
+
 function PricingPage() {
   const { isSignedIn, getToken } = useAuth();
-  const { isShinySubscriber, isLoaded } = useSubscription();
+  const api = useApi();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSubscriber, setIsSubscriber] = useState(false);
+  const [subLoaded, setSubLoaded] = useState(false);
+  // When returning from Stripe with ?success=true, poll until webhook confirms
+  const [confirming, setConfirming] = useState(SUCCESS_PARAM);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const searchParams = new URLSearchParams(
-    typeof window !== 'undefined' ? window.location.search : ''
-  );
-  const success = searchParams.get('success') === 'true';
-  const canceled = searchParams.get('canceled') === 'true';
+  // Load initial subscription status
+  useEffect(() => {
+    if (!isSignedIn) { setSubLoaded(true); return; }
+    api.getBattle('__status__').catch(() => null); // warm auth
+    getToken()
+      .then((token) => token ? fetch(`${import.meta.env.VITE_API_URL ?? 'http://localhost:3001'}/users/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }) : null)
+      .then((r) => r?.ok ? r.json() : null)
+      .then((data: { isShinySubscriber?: boolean } | null) => {
+        setIsSubscriber(data?.isShinySubscriber ?? false);
+      })
+      .catch(() => {})
+      .finally(() => setSubLoaded(true));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSignedIn]);
+
+  // Poll for subscription confirmation after Stripe redirect
+  useEffect(() => {
+    if (!SUCCESS_PARAM || !isSignedIn || !subLoaded) return;
+    if (isSubscriber) { setConfirming(false); return; }
+
+    let attempts = 0;
+    const MAX = 15; // 15 × 2s = 30s max wait
+
+    pollRef.current = setInterval(() => {
+      attempts++;
+      getToken()
+        .then((token) => token ? fetch(`${import.meta.env.VITE_API_URL ?? 'http://localhost:3001'}/users/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }) : null)
+        .then((r) => r?.ok ? r.json() : null)
+        .then((data: { isShinySubscriber?: boolean } | null) => {
+          if (data?.isShinySubscriber) {
+            setIsSubscriber(true);
+            setConfirming(false);
+            if (pollRef.current) clearInterval(pollRef.current);
+          } else if (attempts >= MAX) {
+            setConfirming(false);
+            if (pollRef.current) clearInterval(pollRef.current);
+          }
+        })
+        .catch(() => {
+          if (attempts >= MAX) {
+            setConfirming(false);
+            if (pollRef.current) clearInterval(pollRef.current);
+          }
+        });
+    }, 2000);
+
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSignedIn, subLoaded, isSubscriber]);
 
   async function handleSubscribe() {
     setLoading(true);
@@ -40,12 +98,16 @@ function PricingPage() {
         <p>Subscribe for $5/month to unlock shiny variants in battle and the Pokédex.</p>
       </div>
 
-      {success && (
-        <div className="alert alert-success">
-          Subscription activated! Shiny Pokémon are now unlocked.
+      {SUCCESS_PARAM && (
+        <div className="alert alert-success" style={{ textAlign: 'center', fontSize: '1.1rem', padding: '1.2rem 2rem' }}>
+          {confirming
+            ? '⏳ Payment confirmed! Activating your Shiny subscription…'
+            : isSubscriber
+            ? '✨ Subscription activated! Shiny Pokémon are now unlocked.'
+            : '✅ Payment received. Subscription will activate shortly — refresh if needed.'}
         </div>
       )}
-      {canceled && (
+      {CANCELED_PARAM && (
         <div className="alert alert-info">
           Checkout canceled. You can subscribe anytime.
         </div>
@@ -58,7 +120,7 @@ function PricingPage() {
           <p className="price">$0 / month</p>
           <ul>
             <li>Full battle system</li>
-            <li>All 151 Pokémon</li>
+            <li>All Pokémon</li>
             <li>Multiplayer rooms</li>
           </ul>
           <button disabled className="btn btn-secondary">
@@ -76,15 +138,19 @@ function PricingPage() {
             <li>Exclusive shiny badge</li>
           </ul>
 
-          {!isLoaded ? (
+          {!subLoaded ? (
             <button disabled className="btn btn-primary">Loading...</button>
           ) : !isSignedIn ? (
             <SignInButton mode="modal">
               <button className="btn btn-primary">Sign in to Subscribe</button>
             </SignInButton>
-          ) : isShinySubscriber ? (
+          ) : isSubscriber ? (
             <button disabled className="btn btn-success">
               ✨ Already Subscribed
+            </button>
+          ) : confirming ? (
+            <button disabled className="btn btn-primary">
+              ⏳ Activating…
             </button>
           ) : (
             <button
