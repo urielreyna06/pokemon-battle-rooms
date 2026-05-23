@@ -231,8 +231,14 @@ All core features are implemented and the Docker stack is confirmed healthy:
 - [x] HP bar redesign v2 — 18px height, 2px solid border `rgba(255,255,255,0.35)`, inner shadow on track, glow shadow on fill keyed to HP color
 - [x] "YOUR TURN" banner — FightPanel shows green "▶ YOUR TURN — choose an action" when `canAct`, gray "⏳ WAITING..." otherwise
 - [x] Forfeit / Give Up — `POST /battle/:roomCode/forfeit` endpoint; `useApi.forfeit()`; battle.$code.tsx shows subtle forfeit button (visible in menu/busy/switch phases, hidden for spectators/finished); confirmation modal (`ForfeitModal`) with cancel/confirm; `emitBattleUpdate` triggers SSE so opponent sees result instantly; `battle-forfeit.test.ts` (16 tests); total 108 tests (10 files)
+- [x] Stripe success_url port fix — `docker-compose.yml` `CLIENT_URL` default changed `:3000` → `:3002`; `pricing.tsx` polls `/users/me` every 2 s (up to 30 s) on `?success=true`, showing "Activating…" until webhook confirms `shinyUnlocked`
+- [x] Type-effectiveness cache — `typeRelationsCache: Map<string, TypeRelationDoc | null>` in `battleEngine.ts`; eliminates per-damage-calc DB query; 18 Pokémon types reach 100% cache hit rate within first few turns
+- [x] Architecture evaluation — `ARCHITECTURE.md` section 16: 7.2/10 score, file-level findings (battleEngine 632 lines, battle.$code.tsx 921 lines), applied improvements, ranked next steps
 
 ### Remaining
 
 - [ ] Revoke/rotate GitHub tokens shared in session (PAT + 2 classic tokens for urielreyna06)
 - [ ] Re-run importer after Docker rebuild to load ALL Pokémon: `docker compose --profile import run --rm importer`
+- [ ] Extract `useBattleSSE` + `useTurnTimer` hooks from `battle.$code.tsx` (921 lines → <700)
+- [ ] Enforce move PP in engine (`processTurn` should decrement + validate PP > 0)
+- [ ] TTL index on `rooms` + `battles` MongoDB collections (production hygiene)
