@@ -473,6 +473,23 @@ function FightPanel({
         paddingTop: '8px',
       }}
     >
+      {/* Turn status banner */}
+      <div
+        style={{
+          marginBottom: '8px',
+          padding: '5px 10px',
+          borderRadius: '4px',
+          background: canAct ? 'rgba(46,204,113,0.15)' : 'rgba(91,74,94,0.2)',
+          border: `1px solid ${canAct ? 'rgba(46,204,113,0.5)' : 'rgba(91,74,94,0.3)'}`,
+          fontFamily: "'Press Start 2P', monospace",
+          fontSize: '7px',
+          color: canAct ? '#2ecc71' : '#5b4a5e',
+          textAlign: 'center',
+          letterSpacing: '0.06em',
+        }}
+      >
+        {canAct ? '▶ YOUR TURN — choose an action' : '⏳ WAITING...'}
+      </div>
       {/* 2x2 move grid */}
       <div
         style={{

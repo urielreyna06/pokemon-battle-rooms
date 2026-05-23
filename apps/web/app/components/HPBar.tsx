@@ -33,11 +33,12 @@ export function HPBar({
         <div
           className="flex-1"
           style={{
-            height: '12px',
-            borderRadius: '6px',
-            background: '#0e0e1a',
-            border: '1px solid rgba(255,255,255,0.15)',
+            height: '18px',
+            borderRadius: '9px',
+            background: '#0a0818',
+            border: '2px solid rgba(255,255,255,0.35)',
             overflow: 'hidden',
+            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,0,0,0.5)',
           }}
         >
           <div
@@ -45,8 +46,13 @@ export function HPBar({
               width: `${pct}%`,
               height: '100%',
               background: gradient,
-              borderRadius: '6px',
-              transition: 'width 0.3s ease, background 0.3s ease',
+              borderRadius: '9px',
+              transition: 'width 0.4s ease, background 0.4s ease',
+              boxShadow: pct > 50
+                ? 'inset 0 2px 0 rgba(255,255,255,0.35), 0 0 8px rgba(46,204,113,0.6)'
+                : pct > 20
+                ? 'inset 0 2px 0 rgba(255,255,255,0.35), 0 0 8px rgba(243,156,18,0.6)'
+                : 'inset 0 2px 0 rgba(255,255,255,0.35), 0 0 8px rgba(231,76,60,0.8)',
             }}
           />
         </div>

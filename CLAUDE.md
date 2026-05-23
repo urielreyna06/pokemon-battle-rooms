@@ -227,7 +227,9 @@ All core features are implemented and the Docker stack is confirmed healthy:
 - [x] Forced switch SwitchMenu filtering — SwitchMenu now shows only alive non-active team members during forced switch (`isForcedSwitch=true`)
 - [x] Battle UI DS Black/White aesthetics — richer gradient bg `#0d1b2a→#1b2838→#0a0a12`; 8px border-radius on all panels; subtle white borders; Pokémon name labels 16px bold `#f0e8d0`; `FightPanel` separator border
 - [x] Pokémon blocking across players — backend validates no duplicate Pokémon IDs in `POST /rooms/:code/ready` (returns `{error:'duplicate_pokemon',duplicates:[...]}`); frontend polls room every 3s, shows opponent picks at 0.4 opacity with "TAKEN" badge, blocks selection with toast
-- [x] New test files: `pokemon-blocking.test.ts` (9 tests), `battle-turn-order.test.ts` (16 tests); 6 tests added to `battle-faint-switch.test.ts`; total 74 tests (8 files)
+- [x] New test files: `pokemon-blocking.test.ts` (9 tests), `battle-turn-order.test.ts` (16 tests); 6 tests added to `battle-faint-switch.test.ts`; `battle-spam-prevention.test.ts` (18 tests); total 92 tests (9 files)
+- [x] HP bar redesign v2 — 18px height, 2px solid border `rgba(255,255,255,0.35)`, inner shadow on track, glow shadow on fill keyed to HP color
+- [x] "YOUR TURN" banner — FightPanel shows green "▶ YOUR TURN — choose an action" when `canAct`, gray "⏳ WAITING..." otherwise
 
 ### Remaining
 
