@@ -50,6 +50,7 @@ function BattlePage() {
   const [toast, setToast] = useState<ToastState>(null);
   const [timeLeft, setTimeLeft] = useState(TURN_TIMEOUT_S);
   const [forcedSwitch, setForcedSwitch] = useState(false);
+  const [showForfeit, setShowForfeit] = useState(false);
   const prevLogLen = useRef(0);
   const evtSource = useRef<EventSource | null>(null);
   const autoSubmitRef = useRef<() => void>(() => {});
@@ -140,6 +141,16 @@ function BattlePage() {
     }
   }
 
+  async function handleForfeit() {
+    setShowForfeit(false);
+    try {
+      const { battle: updated } = await api.forfeit(code, playerId);
+      handleBattleUpdate(updated);
+    } catch (err) {
+      setToast({ msg: err instanceof Error ? err.message : 'Forfeit failed', kind: 'error' });
+    }
+  }
+
   // ── Derived state ────────────────────────────────────────────────────────────
   const myState = battle?.players.find((p) => p.id === playerId);
   const oppState = battle?.players.find((p) => p.id !== playerId);
@@ -210,6 +221,11 @@ function BattlePage() {
         position: 'relative',
       }}
     >
+      {/* ── Forfeit confirmation modal ───────────────────────────────────────── */}
+      {showForfeit && (
+        <ForfeitModal onConfirm={handleForfeit} onCancel={() => setShowForfeit(false)} />
+      )}
+
       {/* ── Victory / Defeat overlay ──────────────────────────────────────────── */}
       {phase === 'finished' && (
         <VictoryOverlay
@@ -334,6 +350,37 @@ function BattlePage() {
           />
         ) : null}
       </div>
+
+      {/* ── Forfeit button ───────────────────────────────────────────────────── */}
+      {!isSpectator && battle.status === 'active' && phase !== 'finished' && (
+        <div style={{ padding: '0 16px 12px', flexShrink: 0, textAlign: 'center' }}>
+          <button
+            onClick={() => setShowForfeit(true)}
+            style={{
+              background: 'transparent',
+              color: '#5b4a5e',
+              border: '1px solid #2a1f2e',
+              borderRadius: '4px',
+              padding: '5px 16px',
+              fontFamily: "'Press Start 2P', monospace",
+              fontSize: '6px',
+              cursor: 'pointer',
+              letterSpacing: '0.06em',
+              transition: 'color 0.2s, border-color 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.color = '#e84028';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = '#e84028';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.color = '#5b4a5e';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = '#2a1f2e';
+            }}
+          >
+            ✕ FORFEIT
+          </button>
+        </div>
+      )}
 
       <Toast toast={toast} onDismiss={() => setToast(null)} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -763,6 +810,98 @@ function VictoryOverlay({ won, isSpectator, winnerPlayerId, players }: {
       >
         ▶ PLAY AGAIN
       </a>
+    </div>
+  );
+}
+
+function ForfeitModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.85)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 50,
+        padding: '24px',
+      }}
+    >
+      <div
+        style={{
+          background: '#0a0818',
+          border: '3px solid #e84028',
+          borderRadius: '8px',
+          padding: '24px',
+          maxWidth: '300px',
+          width: '100%',
+          boxShadow: '0 0 40px rgba(232,64,40,0.25), 0 8px 0 #000',
+          textAlign: 'center',
+        }}
+      >
+        <div style={{ fontSize: '28px', marginBottom: '10px' }}>🏳️</div>
+        <h3
+          style={{
+            fontFamily: "'Press Start 2P', monospace",
+            fontSize: '10px',
+            color: '#f0e8d0',
+            letterSpacing: '0.06em',
+            marginBottom: '10px',
+          }}
+        >
+          FORFEIT?
+        </h3>
+        <p
+          style={{
+            fontFamily: "'VT323', monospace",
+            fontSize: '18px',
+            color: '#5b4a5e',
+            marginBottom: '20px',
+            lineHeight: 1.4,
+          }}
+        >
+          Are you sure you want to forfeit? This will give the win to your opponent.
+        </p>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={onCancel}
+            style={{
+              flex: 1,
+              background: '#2a1f2e',
+              color: '#f0e8d0',
+              border: '3px solid #14101a',
+              borderRadius: '8px',
+              padding: '10px',
+              fontFamily: "'Press Start 2P', monospace",
+              fontSize: '7px',
+              cursor: 'pointer',
+              boxShadow: '0 3px 0 #14101a',
+              letterSpacing: '0.06em',
+            }}
+          >
+            CANCEL
+          </button>
+          <button
+            onClick={onConfirm}
+            style={{
+              flex: 1,
+              background: '#8b1a12',
+              color: '#f0e8d0',
+              border: '3px solid #14101a',
+              borderRadius: '8px',
+              padding: '10px',
+              fontFamily: "'Press Start 2P', monospace",
+              fontSize: '7px',
+              cursor: 'pointer',
+              boxShadow: '0 3px 0 #14101a',
+              letterSpacing: '0.06em',
+            }}
+          >
+            FORFEIT
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

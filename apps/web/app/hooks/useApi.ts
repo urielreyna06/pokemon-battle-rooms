@@ -108,5 +108,11 @@ export function useApi() {
 
     getBattle: (roomCode: string) =>
       request<{ battle: ActionResponse['battle'] }>(`/battle/${roomCode}`),
+
+    forfeit: (roomCode: string, playerId: string) =>
+      request<ActionResponse>(`/battle/${roomCode}/forfeit`, {
+        method: 'POST',
+        body: JSON.stringify({ playerId }),
+      }),
   };
 }

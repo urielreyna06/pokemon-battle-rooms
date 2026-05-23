@@ -61,6 +61,57 @@ battleRoutes.get("/:roomCode/events", async (c) => {
   });
 });
 
+// POST /battle/:roomCode/forfeit — player concedes
+battleRoutes.post("/:roomCode/forfeit", async (c) => {
+  try {
+    const db = await getDb();
+    const { roomCode } = c.req.param();
+    const body = await c.req.json<{ playerId: string }>();
+
+    if (!body.playerId) {
+      return c.json({ error: "playerId is required" }, 400);
+    }
+
+    const battle = await db
+      .collection<BattleDoc>("battles")
+      .findOne({ roomCode });
+
+    if (!battle) return c.json({ error: "Battle not found" }, 404);
+
+    if (battle.status !== "active") {
+      return c.json({ error: "Battle is already finished" }, 409);
+    }
+
+    const player = battle.players.find((p) => p.id === body.playerId);
+    if (!player) return c.json({ error: "Player not in this battle" }, 403);
+
+    const opponent = battle.players.find((p) => p.id !== body.playerId);
+    const winnerPlayerId = opponent?.id;
+    const activeName =
+      player.team.find((p) => p.instanceId === player.activePokemonId)?.name ??
+      "Player";
+
+    await db.collection<BattleDoc>("battles").updateOne(
+      { roomCode },
+      {
+        $set: { status: "finished" as const, winnerPlayerId },
+        $push: { battleLog: `${activeName} forfeited the battle!` },
+      }
+    );
+
+    emitBattleUpdate(roomCode);
+
+    const updated = await db
+      .collection<BattleDoc>("battles")
+      .findOne({ roomCode }, { projection: { _id: 0 } });
+
+    return c.json({ battle: updated });
+  } catch (err) {
+    console.error("POST /battle/:roomCode/forfeit error:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
 // POST /battle/:roomCode/action — submit player action
 battleRoutes.post("/:roomCode/action", async (c) => {
   try {

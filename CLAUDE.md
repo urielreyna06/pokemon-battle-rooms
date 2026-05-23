@@ -230,6 +230,7 @@ All core features are implemented and the Docker stack is confirmed healthy:
 - [x] New test files: `pokemon-blocking.test.ts` (9 tests), `battle-turn-order.test.ts` (16 tests); 6 tests added to `battle-faint-switch.test.ts`; `battle-spam-prevention.test.ts` (18 tests); total 92 tests (9 files)
 - [x] HP bar redesign v2 — 18px height, 2px solid border `rgba(255,255,255,0.35)`, inner shadow on track, glow shadow on fill keyed to HP color
 - [x] "YOUR TURN" banner — FightPanel shows green "▶ YOUR TURN — choose an action" when `canAct`, gray "⏳ WAITING..." otherwise
+- [x] Forfeit / Give Up — `POST /battle/:roomCode/forfeit` endpoint; `useApi.forfeit()`; battle.$code.tsx shows subtle forfeit button (visible in menu/busy/switch phases, hidden for spectators/finished); confirmation modal (`ForfeitModal`) with cancel/confirm; `emitBattleUpdate` triggers SSE so opponent sees result instantly; `battle-forfeit.test.ts` (16 tests); total 108 tests (10 files)
 
 ### Remaining
 
