@@ -201,7 +201,7 @@ function BattlePage() {
     <div
       style={{
         minHeight: '100vh',
-        background: 'linear-gradient(180deg, #0d1b2a 0%, #1b2838 30%, #0a0a12 100%)',
+        background: 'linear-gradient(180deg, #1a3a1a 0%, #2d4a1e 20%, #1b2838 60%, #0a0a12 100%)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -252,6 +252,11 @@ function BattlePage() {
             size="md"
             animating={anim?.target === 'opp' ? anim.type : null}
           />
+          <div style={{
+            width: '80px', height: '16px',
+            background: 'radial-gradient(ellipse, rgba(0,0,0,0.4) 0%, transparent 70%)',
+            margin: '-8px auto 0',
+          }} />
         </div>
 
         {/* My sprite (bottom-left) */}
@@ -263,6 +268,11 @@ function BattlePage() {
             animating={anim?.target === 'me' ? anim.type : null}
             isBack
           />
+          <div style={{
+            width: '80px', height: '16px',
+            background: 'radial-gradient(ellipse, rgba(0,0,0,0.4) 0%, transparent 70%)',
+            margin: '-8px auto 0',
+          }} />
         </div>
 
         {/* Turn counter center */}
@@ -337,7 +347,7 @@ function OpponentInfo({ pokemon, player, anim }: { pokemon: BattlePokemon; playe
   return (
     <div
       style={{
-        background: 'rgba(20, 16, 26, 0.92)',
+        background: 'rgba(10, 8, 20, 0.90)',
         border: '3px solid #2a1f2e',
         borderBottom: '2px solid #3a2e4a',
         borderRadius: '8px',
@@ -519,15 +529,13 @@ function SwitchMenu({
   onSwitch: (instanceId: string) => void;
   onCancel: () => void;
 }) {
-  // Filter team for forced switch: only alive and not active
-  const visibleTeam = isForcedSwitch
-    ? player.team.filter(p => p.instanceId !== player.activePokemonId && p.currentHp > 0)
-    : player.team;
+  // Filter team: for forced switch show only alive non-active; for voluntary show all alive except active
+  const visibleTeam = player.team.filter(p => p.instanceId !== player.activePokemonId && p.currentHp > 0);
 
   return (
     <div
       style={{
-        background: 'rgba(15,10,25,0.90)',
+        background: 'rgba(10, 8, 20, 0.90)',
         border: '3px solid #2a1f2e',
         borderRadius: '8px',
         padding: '10px 12px',
@@ -617,7 +625,7 @@ function SpectatorPanel() {
         justifyContent: 'center',
         gap: '12px',
         padding: '16px',
-        background: 'rgba(15,10,25,0.90)',
+        background: 'rgba(10, 8, 20, 0.90)',
         border: '3px solid #2a1f2e',
         borderRadius: '8px',
         boxShadow: '0 4px 0 #000',
@@ -640,7 +648,7 @@ function WaitingPanel() {
         justifyContent: 'center',
         gap: '12px',
         padding: '16px',
-        background: 'rgba(15,10,25,0.90)',
+        background: 'rgba(10, 8, 20, 0.90)',
         border: '3px solid #2a1f2e',
         borderRadius: '8px',
         boxShadow: '0 4px 0 #000',

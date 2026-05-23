@@ -1,271 +1,360 @@
-# ⚔️ Pokémon Battle Rooms
+# PokeBattle — Multiplayer Pokémon Battle Arena
 
-Aplicación web full-stack de batallas Pokémon 1v1 en tiempo real mediante salas con código compartido.  
-Proyecto académico — UTP FISC.
+[![Bun](https://img.shields.io/badge/Bun-1.1-orange)](https://bun.sh)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)](https://www.typescriptlang.org)
+[![MongoDB](https://img.shields.io/badge/MongoDB-7-green)](https://www.mongodb.com)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED)](https://www.docker.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
----
+A real-time multiplayer 1v1 Pokémon battle game with turn-based combat, team selection, and Stripe subscription support for shiny Pokémon. Built with Bun, Hono, React, and MongoDB.
 
-## Stack Tecnológico
-
-| Capa         | Tecnología                          |
-|--------------|-------------------------------------|
-| Runtime      | [Bun](https://bun.sh) 1.1+          |
-| Frontend     | [TanStack Start](https://tanstack.com/start) + React 18 |
-| Backend API  | [Hono](https://hono.dev) 4.x        |
-| Base de datos| MongoDB 7                           |
-| Auth         | [Clerk](https://clerk.com)          |
-| Pagos        | [Stripe](https://stripe.com)        |
-| Contenedores | Docker + Docker Compose             |
+**[Repository](https://github.com/urielreyna06/pokemon-battle-rooms)** | **[Live Demo](#how-to-run)**
 
 ---
 
-## Estructura del proyecto
+## Table of Contents
 
-```
-pokemon-battle-rooms/
-├── docker-compose.yml
-├── .env.example
-├── scripts/
-│   └── import-pokemon.ts       ← Importación única desde PokeAPI
-├── packages/
-│   └── shared/
-│       └── types.ts            ← Tipos TypeScript compartidos
-└── apps/
-    ├── api/                    ← Backend Hono (puerto 3001)
-    │   └── src/
-    │       ├── server.ts
-    │       ├── db.ts
-    │       ├── routes/         ← rooms, battle, pokemon
-    │       └── engine/
-    │           └── battleEngine.ts  ← Motor de batalla completo
-    └── web/                    ← Frontend TanStack Start (puerto 3000)
-        └── app/
-            ├── routes/         ← index, lobby, team, battle
-            └── components/     ← HPBar, PokemonSprite, MoveButton, BattleLog
-```
+- [Project Description](#project-description)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [How to Run](#how-to-run)
+  - [Option A: Docker (Recommended)](#option-a-docker-recommended)
+  - [Option B: Local Development](#option-b-local-development)
+  - [Starting a Battle](#starting-a-battle)
+- [Implemented Battle Rules](#implemented-battle-rules)
+- [Data Source: PokéAPI](#data-source-pokeapi)
+- [Running Tests](#running-tests)
+- [Known Limitations](#known-limitations)
 
 ---
 
-## Configuración de Auth y Pagos
+## Project Description
 
-### Clerk (autenticación)
+**PokeBattle** is an educational real-time multiplayer Pokémon battle game where two players compete in turn-based 1v1 battles. Players create or join private battle rooms by sharing a 6-character code, select their team of 6 Pokémon, and engage in strategic turn-by-turn combat with real-time updates.
 
-1. Crear cuenta en [clerk.com](https://dashboard.clerk.com) y crear una nueva aplicación.
-2. Copiar las claves en `.env`:
-   ```
-   CLERK_SECRET_KEY=sk_test_...
-   VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
-   ```
-3. En el dashboard de Clerk, ir a **Webhooks → Add Endpoint**:
-   - URL: `https://tu-dominio.com/webhooks/clerk`
-   - Eventos: `user.created`, `user.updated`, `user.deleted`
-4. Copiar el **Signing Secret** del webhook en `.env`:
-   ```
-   CLERK_WEBHOOK_SECRET=whsec_...
-   ```
+The UI is inspired by **Pokémon Black/White** for educational purposes, featuring a DS-era aesthetic with gradient backgrounds, DS-style HP bars, and a focused battle interface.
 
-### Stripe (suscripciones — $5/mes para Shiny Pokémon)
+### Features
 
-1. Crear cuenta en [stripe.com](https://dashboard.stripe.com) en **modo test**.
-2. Ir a **Products → Add Product**:
-   - Nombre: `Shiny Hunter`
-   - Precio: `$5.00 / month` (recurrente)
-3. Copiar las claves y el Price ID en `.env`:
-   ```
-   STRIPE_SECRET_KEY=sk_test_...
-   STRIPE_PUBLISHABLE_KEY=pk_test_...
-   STRIPE_PRICE_ID=price_...
-   ```
-4. Para desarrollo local, reenviar webhooks con la [Stripe CLI](https://stripe.com/docs/stripe-cli):
-   ```bash
-   stripe listen --forward-to localhost:3001/webhooks/stripe
-   ```
-   Copiar el webhook signing secret en `.env`:
-   ```
-   STRIPE_WEBHOOK_SECRET=whsec_...
-   ```
-5. Para producción, crear un webhook en el dashboard de Stripe:
-   - URL: `https://tu-dominio.com/webhooks/stripe`
-   - Eventos: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
+- **Room Creation & Code Joining**: Create a battle room and invite opponents via shareable 6-character code
+- **Team Selection**: Choose 6 Pokémon from a searchable, filterable roster with real-time Pokémon locking (opponent sees your picks instantly)
+- **Real-Time Turn-Based Battles**: SSE (Server-Sent Events) live updates replace polling; no refresh lag
+- **Complete Battle Rules**:
+  - Type effectiveness with 2×/0.5×/0× multipliers based on PokéAPI data
+  - Status effects (burn, paralysis, poison, sleep, freeze) with side effects
+  - Critical hits (1/16 base chance, 1.5× damage)
+  - Move priority & speed-based turn ordering (paralysis halves speed)
+  - Forced switches after Pokémon faint
+  - 60-second turn timer with auto-submit fallback
+- **Shiny Pokémon**: $5/month Stripe subscription unlocks 5% chance of shiny Pokémon per battle (visual only)
+- **Spectator Mode**: Any authenticated player can watch active battles via SSE
+- **Pokémon Data**: Import ALL Pokémon from PokéAPI with complete move pools and type relationships
 
-### Shiny Pokémon
+### Educational Purpose
 
-Los suscriptores activos (`subscriptionStatus: active`) obtienen:
-- Sprites shiny en el Pokédex (`/pokemon`)
-- **5% de probabilidad** de que un Pokémon entre en batalla como shiny (visual únicamente, sin cambio de stats)
+UI design references to Pokémon Black/White are for **educational inspiration only**. This project demonstrates full-stack web development patterns: real-time WebSocket-free architecture (SSE), server-side game logic, Stripe payment integration, Clerk authentication, and battle AI turn ordering.
 
 ---
 
-## Ejecución con Docker (recomendado)
+## Tech Stack
 
-### 1. Levantar los servicios
+| Layer | Technology |
+|-------|-----------|
+| **Runtime** | [Bun 1.1](https://bun.sh) |
+| **API Framework** | [Hono 4.x](https://hono.dev) (TypeScript strict mode) |
+| **Database** | [MongoDB 7](https://www.mongodb.com) (native driver, no ODM) |
+| **Authentication** | [Clerk](https://clerk.com) (@clerk/react, @clerk/backend) |
+| **Payments** | [Stripe](https://stripe.com) v16 ($5/month subscription) |
+| **Frontend** | React 18 + TanStack Router v1 + Vite |
+| **Testing** | Vitest v2 + @vitest/coverage-v8 (≥80% coverage) |
+| **Containers** | Docker Compose + BuildKit cache mounts |
+| **Data Source** | [PokéAPI](https://pokeapi.co/) (open-source REST API) |
+
+---
+
+## How to Run
+
+### Option A: Docker (Recommended)
+
+**Prerequisites**: Docker, Docker Compose
 
 ```bash
-docker compose up --build
+# 1. Clone the repository
+git clone https://github.com/urielreyna06/pokemon-battle-rooms
+cd pokemon-battle-rooms
+
+# 2. Copy environment file templates
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env
+
+# 3. Fill in credentials in your .env files
+# Required:
+# - CLERK_SECRET_KEY, CLERK_WEBHOOK_SECRET (from clerk.com)
+# - STRIPE_SECRET_KEY, STRIPE_PRICE_ID, STRIPE_WEBHOOK_SECRET (from stripe.com)
+# - MONGO_URL (local or Atlas)
+# - VITE_CLERK_PUBLISHABLE_KEY, VITE_STRIPE_PUBLISHABLE_KEY
+
+# 4. Start all services (API, Web, MongoDB)
+docker compose up --build -d
+
+# 5. Import Pokémon data (first time only)
+docker compose --profile import run --rm importer
+
+# 6. Open the app
+# Frontend: http://localhost:3002
+# API health: http://localhost:3001/health
+# Logs: docker compose logs -f api
 ```
 
-Esto levanta tres servicios: `mongo` (MongoDB 7), `api` (Hono en :3001) y `web` (frontend en :3000).
+### Option B: Local Development
 
-### 2. Importar datos de PokeAPI → MongoDB
-
-La importación **debe ejecutarse una única vez** (o cuando se quiera refrescar los datos). Tardará varios minutos porque hace ~300+ peticiones a PokeAPI con delays para evitar rate limiting.
+**Prerequisites**: Bun, Node 20+, MongoDB running locally
 
 ```bash
-docker compose run --rm importer
-```
-
-O sin Docker, con Bun instalado localmente:
-
-```bash
-MONGO_URL=mongodb://localhost:27017/pokemon_battle bun run scripts/import-pokemon.ts
-```
-
-### 3. Abrir la aplicación
-
-- Frontend: http://localhost:3000
-- API health check: http://localhost:3001/health
-
----
-
-## Ejecución sin Docker (desarrollo local)
-
-Requisitos: Bun 1.1+ y MongoDB corriendo en localhost:27017.
-
-```bash
-# Instalar dependencias
+# Install dependencies
 bun install
 
-# Importar datos (una sola vez)
-MONGO_URL=mongodb://localhost:27017/pokemon_battle bun run scripts/import-pokemon.ts
-
-# Arrancar API (terminal 1)
+# Terminal 1: Start API (port 3001)
 bun run dev:api
 
-# Arrancar Web (terminal 2)
+# Terminal 2: Start Web (port 3000)
 bun run dev:web
+
+# Import Pokémon data (one-time)
+cd apps/api && bun run ../../scripts/import-pokemon.ts
 ```
 
----
+### Starting a Battle
 
-## Flujo de juego
-
-1. **Jugador A** abre http://localhost:3000, ingresa su nombre y crea una sala → recibe un código de 6 caracteres.
-2. **Jugador B** abre la misma URL en otro navegador/pestaña de incógnito, ingresa su nombre y el código de sala.
-3. Ambos están en el **Lobby** — cuando los dos presionan "Mark as Ready", pasan a la selección de equipo.
-4. Cada uno selecciona hasta **6 Pokémon** del catálogo y confirma.
-5. La **batalla** comienza: por turnos, cada jugador elige usar un movimiento o cambiar su Pokémon activo.
-6. El servidor resuelve ambas acciones y actualiza el estado. La UI hace polling cada 1.5 segundos.
-7. Cuando todos los Pokémon de un jugador llegan a 0 HP, ese jugador pierde.
-
----
-
-## Reglas implementadas
-
-### Fórmula de daño
-
-```
-baseDamage = floor(floor(floor((2*50)/5+2) * power * atkStat / defStat) / 50) + 2
-randomFactor = random(85..100) / 100
-stab = 1.5 si el tipo del movimiento coincide con uno de los tipos del atacante
-typeMultiplier = producto de efectividades por cada tipo del defensor (x0, x0.5, x1, x2)
-critical = 1.5 si random < 1/24
-burnModifier = 0.5 si atacante está quemado Y movimiento es físico
-finalDamage = max(1, floor(baseDamage * randomFactor * stab * typeMultiplier * critical * burnModifier))
-             -- excepto si typeMultiplier = 0, entonces damage = 0
-```
-
-Stats de batalla calculadas con nivel fijo 50 e IVs aleatorios (0–31):
-
-```
-HP  = floor(((2 * baseHp + iv) * 50) / 100) + 50 + 10
-Otro = floor(((2 * base + iv) * 50) / 100) + 5
-```
-
-### Estados temporales
-
-Los estados duran **exactamente 3 turnos** del Pokémon afectado y se **eliminan al cambiar de Pokémon**:
-
-| Estado       | Efecto                                             |
-|--------------|----------------------------------------------------|
-| `burn`       | -5% HP máx por turno; reduce daño físico a la mitad |
-| `poison`     | -5% HP máx por turno                               |
-| `paralysis`  | Speed ÷ 2; 25% de probabilidad de no poder actuar  |
-| `attackDown` | Baja el stage de ataque 1 nivel por turno          |
-| `defenseDown`| Baja el stage de defensa 1 nivel por turno         |
-| `speedDown`  | Baja el stage de velocidad 1 nivel por turno       |
-
-### Orden de acciones
-
-MVP: **coin flip** (aleatorio). El servidor decide el orden antes de resolver ambas acciones.
-
-### Efectividad por tipo
-
-Las relaciones de daño se importan desde PokeAPI (`/api/v2/type/{id}/`) y se guardan en MongoDB. **No están hardcodeadas**. El motor las consulta en tiempo real desde la colección `type_relations`.
+1. **Sign In**: Click "Sign In" → authenticate with Clerk (Google, email, or another method)
+2. **Create a Room**: On the home page, click "Create Room" → a 6-character code is generated
+3. **Share the Code**: Give the code to your opponent (e.g., `AB12XY`)
+4. **Join or Create**: The opponent clicks "Join Room" and enters the code (or you both create separate rooms and meet via code)
+5. **Select Teams**: Both players browse, search, and filter Pokémon, then select 6 for their team
+6. **Lock-In**: Click "Ready" → your Pokémon are locked in and visible to opponent
+7. **Battle Starts**: Once both are ready, the battle begins automatically with turn counter
+8. **Each Turn** (60-second limit):
+   - Choose a **Move** (up to 4 per Pokémon) or **Switch** to another team member
+   - Turn order is determined by: switches first, then move priority, then effective Speed (paralysis halves speed)
+   - On timer expiry, the first valid move auto-submits
+9. **Win Condition**: Last Pokémon standing wins the battle
 
 ---
 
-## Fuente de datos
+## Implemented Battle Rules
 
-- **PokeAPI**: https://pokeapi.co/api/v2/
-  - `GET /pokemon?limit=300&offset=0` — lista paginada
-  - `GET /pokemon/{name}` — detalle (stats, tipos, sprites, movimientos)
-  - `GET /move/{name}` — detalle de cada movimiento
-  - `GET /type/{id}/` — relaciones de daño por tipo
+### Turn Order
+- **Switches execute first** (cost a turn)
+- **Moves ordered by**: priority (desc) → effective speed (desc) → random tiebreaker
+- **Paralysis**: halves Speed stat
+- **Ties broken randomly**: exact speed matches use coin flip
 
-Los datos se importan **una sola vez** y se persisten en MongoDB. Durante las batallas, la app **nunca llama a PokeAPI** — lee exclusivamente desde MongoDB.
+### Type Effectiveness
+- **Full multiplier system**: 2×, 1×, 0.5×, 0× via PokéAPI type relations
+- **Dual-type defenders**: multiplicative (e.g., Fire/Water defending Fire move = 0.5× × 0.5× = 0.25×)
+- **No type immunity**: 0× results are possible (e.g., Water → Grass = 0×)
 
-### Sprite style
+### Critical Hits
+- **Base chance**: 1/16 (6.25%)
+- **Damage multiplier**: 1.5×
 
-Se usa consistentemente `sprites.other.showdown.front_default` (sprites animados de Showdown) con fallback a `sprites.front_default`. Nunca se mezclan estilos 2D con 3D.
+### Status Effects
+| Effect | Damage | Turn Cost | Cure |
+|--------|--------|-----------|------|
+| Burn | 1/16 max HP/turn; Atk ÷ 2 | — | Switch out (persists in battle) |
+| Paralysis | — | 25% skip move | Switch out (persists in battle) |
+| Poison | 1/8 max HP/turn | — | Switch out (persists in battle) |
+| Sleep | — | Skip turn until awake | 20% thaw per turn (random) |
+| Freeze | — | Skip turn until thawed | 20% thaw per turn (random) |
+
+### Switch Rules
+- **Voluntary switch**: costs a turn; player chooses when to switch
+- **Forced switch after faint**: triggered when active Pokémon faints; must switch before next turn; cannot switch to already-fainted or active Pokémon
+- **Cannot switch to same Pokémon**: prevents no-op switches
+
+### Pokémon Locking
+- When a player selects a Pokémon in the lobby, it is **immediately marked as taken** for the opponent via WebSocket
+- Opponent sees selected Pokémon at 40% opacity with a **"TAKEN"** badge
+- Cannot select taken Pokémon; attempting to does nothing
+
+### Real-Time Search & Filters
+- **Search bar**: updates as you type (150ms debounce)
+- **Type filters**: OR logic (selecting Fire OR Water shows both)
+- **Combined filters**: search results AND'd with type filters
+- **Clear Filters button**: resets both search and types
+
+### Turn Timer
+- **60 seconds per turn**
+- **Auto-submit**: if player doesn't act by 0s, the first valid move auto-submits (preventing timeout stalls)
+- **Display**: red when ≤ 10 seconds remaining
+
+### Shiny Pokémon
+- **Unlock**: $5/month Stripe subscription
+- **Spawn chance**: 5% per Pokémon in battle (independent rolls)
+- **Effect**: visual only (different sprite); no stat or gameplay changes
+- **Persistence**: remains until battle ends
 
 ---
 
-## Limitaciones conocidas
+## Data Source: PokéAPI
 
-- **300 Pokémon importados** (primera generación + parte de segunda). Los Pokémon con menos de 4 movimientos dañinos válidos en PokeAPI se excluyen automáticamente del catálogo.
-- **Autenticación requerida** — todos los endpoints de juego requieren sesión Clerk activa.
-- **Orden de turno por coin flip (MVP)** — no implementa prioridad de movimiento + velocidad.
-- **Sin persistencia entre sesiones** — cerrar el navegador pierde el contexto de sala; la batalla sigue activa en el servidor.
-- **Estados secundarios** — los efectos secundarios de movimientos tienen 30% de probabilidad de aplicarse. No todos los movimientos de PokeAPI tienen efectos correctamente parseados.
-- **Sin límite de tiempo por turno** — un jugador puede no actuar indefinidamente.
+All Pokémon data comes from **[PokéAPI](https://pokeapi.co/)**, a free, open-source Pokémon REST API.
 
----
+### What's Imported
 
-## API Endpoints
+- **Pokémon**: name, types, base stats (HP, Atk, Def, SpA, SpD, Spe), move IDs, sprite URL
+- **Moves**: name, type, power, accuracy, category (Physical/Special/Status), priority
+- **Type Relations**: all type-vs-type effectiveness multipliers (2×, 0.5×, 0×)
 
-| Método | Ruta                       | Descripción                                       |
-|--------|----------------------------|---------------------------------------------------|
-| POST   | `/rooms`                   | Crea sala, devuelve código de 6 chars             |
-| POST   | `/rooms/:code/join`        | Jugador se une a sala (`{ playerName }`)          |
-| POST   | `/rooms/:code/team`        | Envía selección de equipo (`{ playerId, team[] }`)|
-| POST   | `/rooms/:code/ready`       | Marca jugador como listo; inicia batalla si ambos |
-| GET    | `/rooms/:code`             | Estado actual de sala + batalla (para polling)    |
-| GET    | `/pokemon`                 | Catálogo paginado (`?limit=20&offset=0`)          |
-| POST   | `/battle/:roomCode/action` | Envía acción (`{ playerId, action }`)             |
-| GET    | `/battle/:roomCode`        | Estado actual de la batalla                       |
-| GET    | `/health`                  | Health check del servidor                         |
-| GET    | `/users/me`                | Perfil del usuario autenticado                    |
-| POST   | `/stripe/create-checkout-session` | Crea sesión de pago Stripe ($5/mes)        |
-| GET    | `/stripe/subscription-status`    | Estado de suscripción del usuario actual    |
-| POST   | `/webhooks/clerk`          | Sincroniza usuarios Clerk → MongoDB               |
-| POST   | `/webhooks/stripe`         | Actualiza `shinyUnlocked` por eventos Stripe      |
-
-> **Nota:** Todos los endpoints excepto `/webhooks/*` y `/health` requieren `Authorization: Bearer <clerk-token>`.
-
----
-
-## Validación post-import
+### Import Process
 
 ```bash
-# Verificar que hay ≥300 Pokémon
-docker compose exec mongo mongosh pokemon_battle --eval "db.pokemon.countDocuments()"
+# Run once after first docker compose up --build
+docker compose --profile import run --rm importer
 
-# Verificar que tienen exactamente 4 movimientos
-docker compose exec mongo mongosh pokemon_battle \
-  --eval "db.pokemon.findOne({}, {name:1, moveIds:1})"
-
-# Verificar relaciones de tipo importadas
-docker compose exec mongo mongosh pokemon_battle \
-  --eval "db.type_relations.countDocuments()"
-# Expected: 18
+# Or locally (requires MONGO_URL set):
+cd apps/api
+bun run ../../scripts/import-pokemon.ts
 ```
+
+The import script (`scripts/import-pokemon.ts`):
+- **Pagination**: follows all PokeAPI `next` links until exhausted (fetches every Pokémon)
+- **Upsert**: safe to re-run; uses MongoDB upsert by `pokedexId` (no duplicates)
+- **Skip incomplete**: skips Pokémon missing required battle data (moves, stats)
+- **Duration**: ~2–3 minutes for full import (~1,000+ Pokémon)
+- **Updates**: re-run periodically if PokeAPI adds new Pokémon
+
+### Storage
+
+| Collection | Documents | Key Fields |
+|-----------|-----------|-----------|
+| `pokemon` | ~1,000+ | `pokedexId`, `name`, `types[]`, `baseStats`, `moveIds[]`, `spriteUrl`, `shinySpriteUrl?` |
+| `moves` | ~900+ | `id`, `name`, `type`, `power`, `accuracy`, `category`, `priority` |
+| `type_relations` | ~400+ | `attackingType`, `defendingType`, `multiplier` (2, 1, 0.5, 0) |
+
+---
+
+## Running Tests
+
+```bash
+cd apps/api
+
+# Run all 74 tests
+bun run test
+
+# Run with coverage report (must stay ≥80%)
+bun run test:coverage
+
+# Run a single test file
+bun run test auth.test.ts
+```
+
+### Test Files (8 files, 74 tests)
+
+| File | Tests | Focus |
+|------|-------|-------|
+| `auth.test.ts` | 6 | Clerk JWT verification, role-based auth |
+| `subscription.test.ts` | 8 | Subscription status checks, shiny unlock |
+| `battle-no-regression.test.ts` | 15 | Damage formula, crits, status effects |
+| `battle-faint-switch.test.ts` | 12 | Faint detection, forced switch flow, alive backup |
+| `battle-turn-order.test.ts` | 16 | Turn ordering, speed, priority, tiebreaks |
+| `pokemon-blocking.test.ts` | 9 | Duplicate Pokémon validation |
+| `stripe-webhook.test.ts` | 4 | Webhook signature verification, user sync |
+| `pricing-flow.test.ts` | 4 | Full subscription lifecycle (none→active→canceled) |
+
+All tests use **Vitest** with **@vitest/coverage-v8** for coverage tracking.
+
+---
+
+## Known Limitations
+
+- **No audio**: sound effects and music not implemented
+- **Mobile UI**: optimized for desktop browsers; mobile layout not fully responsive
+- **Pokémon locking**: uses in-memory WebSocket state — restarting the API server resets it (acceptable since lobby is temporary)
+- **Spectator mode**: frontend-only; any authenticated user can watch active battles (no role-based restrictions)
+- **Account deletion**: Clerk manages user deletion; no in-app flow provided
+- **PokeAPI gaps**: import skips Pokémon with incomplete data (some legendaries, alternate forms missing moves)
+- **No save/resume**: battles must complete in one session; no persistence across reconnects
+- **Single process**: event bus uses in-memory Node.js EventEmitter (works in Docker but not distributed)
+
+---
+
+## Architecture Highlights
+
+### Real-Time Updates (SSE, Not WebSocket)
+
+Uses **Server-Sent Events** (`GET /battle/:roomCode/events`) instead of polling or WebSocket:
+- Simpler than WebSocket (no heartbeat plumbing)
+- Hono's `streamSSE` handles multipart responses
+- Auth via query param `?token=<clerk-jwt>` (EventSource can't set headers)
+- Keepalive pings every 20s
+
+### Battle Logic Isolation
+
+All combat rules live in **`battleEngine.ts`**:
+- Damage calculation
+- Type matchups
+- Status conditions
+- Turn ordering
+- Move execution
+
+Keeps route handlers clean and testable.
+
+### MongoDB-First Data
+
+Native MongoDB driver (no ORM):
+- Direct `getDb().collection('pokemon').find(...)` calls
+- Upserts for safe re-imports
+- Indexes on common queries (`code`, `roomCode`, `pokedexId`)
+
+### Stripe Subscription Flow
+
+Webhook (`POST /webhooks/stripe`) auto-syncs user subscription status to MongoDB:
+- `checkout.session.completed` → `shinyUnlocked: true`
+- `subscription.updated` → status tracking
+- `subscription.deleted` → `shinyUnlocked: false`
+
+---
+
+## Development Workflow
+
+1. **Clone & Setup**
+   ```bash
+   git clone https://github.com/urielreyna06/pokemon-battle-rooms
+   cd pokemon-battle-rooms
+   cp apps/api/.env.example apps/api/.env
+   cp apps/web/.env.example apps/web/.env
+   # Fill in Clerk, Stripe, MongoDB credentials
+   ```
+
+2. **Install & Build**
+   ```bash
+   bun install
+   docker compose up --build -d
+   docker compose --profile import run --rm importer
+   ```
+
+3. **Local Dev**
+   ```bash
+   bun run dev:api   # Terminal 1
+   bun run dev:web   # Terminal 2
+   ```
+
+4. **Test Before Commit**
+   ```bash
+   cd apps/api && bun run test
+   ```
+
+5. **Git Hooks** (Husky + lint-staged)
+   - Runs ESLint, TypeScript, and Vitest on staged files
+   - Pre-commit hook prevents commits with test failures
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+**Questions?** Open an issue on [GitHub](https://github.com/urielreyna06/pokemon-battle-rooms/issues)

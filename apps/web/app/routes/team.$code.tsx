@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useAuth } from '@clerk/react';
 import { useApi } from '../hooks/useApi';
 import { TypeBadge } from '../components/TypeBadge';
 import { Toast } from '../components/Toast';
@@ -33,6 +34,8 @@ function TeamSelectPage() {
   const [loadingAll, setLoadingAll] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const [opponentPokemonIds, setOpponentPokemonIds] = useState<number[]>([]);
+  const { getToken } = useAuth();
+  const wsRef = useRef<WebSocket | null>(null);
 
   // Once confirmed, poll until battle starts
   useEffect(() => {
@@ -54,28 +57,43 @@ function TeamSelectPage() {
     return () => clearInterval(timer);
   }, [confirmed, code, navigate, api]);
 
-  // Poll opponent's team selection (every 3 seconds)
+  // WebSocket connection for opponent's team selection
   useEffect(() => {
-    if (confirmed) return; // Stop polling once we've confirmed
-    let timer: ReturnType<typeof setInterval>;
-
-    async function pollOpponentTeam() {
-      try {
-        const data = await api.getRoomState(code);
-        const opponentPlayer = data.room.players.find((p) => p.id !== playerId);
-        if (opponentPlayer) {
-          setOpponentPokemonIds(opponentPlayer.team);
-        }
-      } catch { /* ignore */ }
+    if (confirmed) {
+      wsRef.current?.close();
+      wsRef.current = null;
+      return;
     }
 
-    pollOpponentTeam();
-    timer = setInterval(pollOpponentTeam, 3000);
-    return () => clearInterval(timer);
-  }, [code, playerId, confirmed, api]);
+    let ws: WebSocket | null = null;
+
+    getToken().then((token) => {
+      if (!token) return;
+      const apiUrl = (import.meta.env.VITE_API_URL ?? 'http://localhost:3001').replace(/^https?/, 'ws');
+      ws = new WebSocket(`${apiUrl}/ws/team/${code}?token=${token}`);
+      wsRef.current = ws;
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data) as { type: string; pokemonIds?: number[] };
+          if (msg.type === 'selection_update' && msg.pokemonIds) {
+            setOpponentPokemonIds(msg.pokemonIds.map(Number));
+          }
+        } catch { /* ignore parse errors */ }
+      };
+
+      ws.onerror = () => { /* silently ignore */ };
+    });
+
+    return () => {
+      ws?.close();
+      wsRef.current = null;
+    };
+  }, [code, confirmed, getToken]);
 
   useEffect(() => {
-    loadPokemon(0);
+    const timer = setTimeout(() => loadPokemon(0), 150);
+    return () => clearTimeout(timer);
   }, [search, typeFilter]);
 
   async function loadPokemon(newOffset: number) {
@@ -126,12 +144,19 @@ function TeamSelectPage() {
     }
 
     setSelected((prev) => {
-      if (prev.includes(id)) return prev.filter((x) => x !== id);
-      if (prev.length >= 6) {
-        setToast({ msg: 'Max 6 Pokémon!', kind: 'warn' });
-        return prev;
+      let newSelection = prev;
+      if (prev.includes(id)) {
+        newSelection = prev.filter((x) => x !== id);
+      } else {
+        if (prev.length >= 6) {
+          setToast({ msg: 'Max 6 Pokémon!', kind: 'warn' });
+          return prev;
+        }
+        newSelection = [...prev, id];
       }
-      return [...prev, id];
+      // Send update via WebSocket
+      wsRef.current?.send(JSON.stringify({ type: 'update_selection', pokemonIds: newSelection }));
+      return newSelection;
     });
   }
 
@@ -397,7 +422,6 @@ function TeamSelectPage() {
           placeholder="Search Pokémon..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') loadPokemon(0); }}
         />
 
         {/* Type filter chips */}
