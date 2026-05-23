@@ -17,10 +17,21 @@ function PricingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubscriber, setIsSubscriber] = useState(false);
+  const [returnCode, setReturnCode] = useState<string | null>(null);
   const [subLoaded, setSubLoaded] = useState(false);
   // When returning from Stripe with ?success=true, poll until webhook confirms
   const [confirming, setConfirming] = useState(SUCCESS_PARAM);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key?.startsWith('player_')) {
+        setReturnCode(key.slice('player_'.length));
+        break;
+      }
+    }
+  }, []);
 
   // Load initial subscription status
   useEffect(() => {
@@ -105,6 +116,16 @@ function PricingPage() {
             : isSubscriber
             ? '✨ Subscription activated! Shiny Pokémon are now unlocked.'
             : '✅ Payment received. Subscription will activate shortly — refresh if needed.'}
+          {!confirming && isSubscriber && returnCode && (
+            <div style={{ marginTop: '16px' }}>
+              <button
+                className="btn btn-primary"
+                onClick={() => { window.location.href = `/team/${returnCode}`; }}
+              >
+                ← Return to Team Selection
+              </button>
+            </div>
+          )}
         </div>
       )}
       {CANCELED_PARAM && (

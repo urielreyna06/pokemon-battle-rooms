@@ -11,7 +11,7 @@ export const Route = createFileRoute('/team/$code')({
   component: TeamSelectPage,
 });
 
-const PAGE_SIZE = 30;
+const PAGE_SIZE = 75;
 
 function TeamSelectPage() {
   const { code } = Route.useParams();
@@ -34,6 +34,8 @@ function TeamSelectPage() {
   const [loadingAll, setLoadingAll] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const [opponentPokemonIds, setOpponentPokemonIds] = useState<number[]>([]);
+  const [isSubscriber, setIsSubscriber] = useState(false);
+  const [showShiny, setShowShiny] = useState(false);
   const { getToken } = useAuth();
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -90,6 +92,20 @@ function TeamSelectPage() {
       wsRef.current = null;
     };
   }, [code, confirmed, getToken]);
+
+  useEffect(() => {
+    getToken().then((token) => {
+      if (!token) return;
+      fetch(`${import.meta.env.VITE_API_URL ?? 'http://localhost:3001'}/users/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data: { isShinySubscriber?: boolean } | null) => {
+          setIsSubscriber(data?.isShinySubscriber ?? false);
+        })
+        .catch(() => {});
+    });
+  }, [getToken]);
 
   useEffect(() => {
     const timer = setTimeout(() => loadPokemon(0), 150);
@@ -237,7 +253,7 @@ function TeamSelectPage() {
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
           {selectedPokemon.map((p) => (
             <div key={p.pokedexId} style={{ textAlign: 'center' }}>
-              <img src={p.spriteUrl} alt={p.name} style={{ width: '64px', height: '64px', imageRendering: 'pixelated', display: 'block' }} />
+              <img src={(showShiny && p.shinySpriteUrl) ? p.shinySpriteUrl : p.spriteUrl} alt={p.name} style={{ width: '64px', height: '64px', imageRendering: 'pixelated', display: 'block' }} />
               <span style={{ fontFamily: "'VT323', monospace", fontSize: '16px', color: '#f0e8d0', textTransform: 'capitalize' }}>{p.name}</span>
             </div>
           ))}
@@ -279,6 +295,27 @@ function TeamSelectPage() {
             Room {code} • Select up to 6
           </div>
         </div>
+        {isSubscriber && (
+          <button
+            onClick={() => setShowShiny((s) => !s)}
+            style={{
+              background: showShiny ? '#c0a020' : '#2a1f2e',
+              color: showShiny ? '#14101a' : '#a08ec0',
+              border: `2px solid ${showShiny ? '#e8c030' : '#3a2f4e'}`,
+              borderRadius: '4px',
+              padding: '6px 10px',
+              fontFamily: "'Press Start 2P', monospace",
+              fontSize: '6px',
+              cursor: 'pointer',
+              letterSpacing: '0.04em',
+              boxShadow: showShiny ? '0 0 8px rgba(192,160,32,0.4)' : '0 2px 0 #000',
+              transition: 'all 0.1s',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {showShiny ? '★ SHINY' : '☆ SHINY'}
+          </button>
+        )}
         <div
           style={{
             fontFamily: "'Press Start 2P', monospace",
@@ -394,7 +431,7 @@ function TeamSelectPage() {
                 >
                   {idx + 1}
                 </div>
-                <img src={p.spriteUrl} alt={p.name} style={{ width: '48px', height: '48px', imageRendering: 'pixelated', display: 'block' }} />
+                <img src={(showShiny && p.shinySpriteUrl) ? p.shinySpriteUrl : p.spriteUrl} alt={p.name} style={{ width: '48px', height: '48px', imageRendering: 'pixelated', display: 'block' }} />
                 <span style={{ fontFamily: "'VT323', monospace", fontSize: '14px', color: '#f0e8d0', textTransform: 'capitalize', display: 'block' }}>
                   {p.name.slice(0, 8)}
                 </span>
@@ -585,6 +622,29 @@ function TeamSelectPage() {
                     TAKEN
                   </div>
                 )}
+                {showShiny && p.shinySpriteUrl && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '-6px',
+                      left: '-6px',
+                      background: '#c0a020',
+                      color: '#14101a',
+                      fontFamily: "'Press Start 2P', monospace",
+                      fontSize: '7px',
+                      width: '14px',
+                      height: '14px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '2px solid #14101a',
+                      zIndex: 11,
+                    }}
+                  >
+                    ★
+                  </div>
+                )}
                 {selIdx && (
                   <div
                     style={{
@@ -609,7 +669,7 @@ function TeamSelectPage() {
                   </div>
                 )}
                 <img
-                  src={p.spriteUrl}
+                  src={(showShiny && p.shinySpriteUrl) ? p.shinySpriteUrl : p.spriteUrl}
                   alt={p.name}
                   style={{ maxWidth: '60px', maxHeight: '60px', objectFit: 'contain', imageRendering: 'pixelated', display: 'block', margin: '0 auto' }}
                 />
