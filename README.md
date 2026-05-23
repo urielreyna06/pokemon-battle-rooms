@@ -239,7 +239,7 @@ The import script (`scripts/import-pokemon.ts`):
 ```bash
 cd apps/api
 
-# Run all 74 tests
+# Run all 150 tests
 bun run test
 
 # Run with coverage report (must stay ≥80%)
@@ -249,18 +249,24 @@ bun run test:coverage
 bun run test auth.test.ts
 ```
 
-### Test Files (8 files, 74 tests)
+> **Important:** Use `bun run test` (not `bun test`). `bun test` invokes Bun's native runner which lacks `vi.mock` support and breaks the test suite.
+
+### Test Files (12 files, 150 tests)
 
 | File | Tests | Focus |
 |------|-------|-------|
-| `auth.test.ts` | 6 | Clerk JWT verification, role-based auth |
-| `subscription.test.ts` | 8 | Subscription status checks, shiny unlock |
-| `battle-no-regression.test.ts` | 15 | Damage formula, crits, status effects |
-| `battle-faint-switch.test.ts` | 12 | Faint detection, forced switch flow, alive backup |
-| `battle-turn-order.test.ts` | 16 | Turn ordering, speed, priority, tiebreaks |
-| `pokemon-blocking.test.ts` | 9 | Duplicate Pokémon validation |
-| `stripe-webhook.test.ts` | 4 | Webhook signature verification, user sync |
-| `pricing-flow.test.ts` | 4 | Full subscription lifecycle (none→active→canceled) |
+| `auth.test.ts` | 5 | Clerk JWT verification, role-based auth |
+| `subscription.test.ts` | 7 | Subscription status checks, shiny unlock |
+| `battle-no-regression.test.ts` | 9 | Damage formula, crits, status effects |
+| `battle-faint-switch.test.ts` | 15 | Faint detection, forced switch flow, alive backup, full attack→faint→switch→continue |
+| `battle-turn-order.test.ts` | 16 | Turn ordering, speed, priority, tiebreaks, `bothPlayersActed` |
+| `battle-pp-enforcement.test.ts` | 38 | PP decrement, out-of-PP blocking, Struggle fallback |
+| `battle-spam-prevention.test.ts` | 18 | Double-submit prevention, phase transitions, race conditions |
+| `battle-forfeit.test.ts` | 16 | Forfeit flow, SSE broadcast, endReason field |
+| `pokemon-blocking.test.ts` | 9 | Duplicate Pokémon validation (server-side ready endpoint) |
+| `stripe-webhook.test.ts` | 7 | Webhook signature verification, user sync |
+| `pricing-flow.test.ts` | 6 | Full subscription lifecycle (none→active→past_due→canceled) |
+| `mongo-ttl.test.ts` | 4 | MongoDB TTL index creation for rooms and battles collections |
 
 All tests use **Vitest** with **@vitest/coverage-v8** for coverage tracking.
 
