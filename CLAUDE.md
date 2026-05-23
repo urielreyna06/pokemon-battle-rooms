@@ -40,6 +40,9 @@ apps/
     auth.test.ts
     subscription.test.ts
     battle-no-regression.test.ts
+    battle-faint-switch.test.ts  ← faint detection, forced switch, pp field, attack→faint→switch→continue
+    battle-turn-order.test.ts    ← bothPlayersActed, switch-before-move priority, speed tiebreak
+    pokemon-blocking.test.ts     ← duplicate Pokémon validation (server-side ready endpoint)
     stripe-webhook.test.ts
     pricing-flow.test.ts         ← full subscription lifecycle (none→active→past_due→canceled)
   web/app/
@@ -163,6 +166,9 @@ bun run dev:web      # port 3000
 
 # Stripe webhook forwarding (local dev)
 stripe listen --forward-to localhost:3001/webhooks/stripe
+
+# Browser smoke test (golden path: auth → room → teams → battle → SSE → spectator → shiny gate)
+cd /tmp/smoke-runner && LD_LIBRARY_PATH=/tmp/libs2/extracted/usr/lib/x86_64-linux-gnu node smoke-test.mjs
 ```
 
 ## SSE real-time battle updates
@@ -185,15 +191,15 @@ stripe listen --forward-to localhost:3001/webhooks/stripe
 
 All core features are implemented and the Docker stack is confirmed healthy:
 - `docker compose up --build -d` → all containers running (mongo healthy, api on 3001, web/nginx on 3002)
-- API: MongoDB connected, 292 Pokémon in DB
+- API: MongoDB connected, Pokémon in DB
 - Web SPA: serving at `http://localhost:3002` with no build or runtime errors
 
 ### Completed
 
 - [x] Run `bun install` after adding stripe/svix/husky/lint-staged deps
-- [x] All 34 Vitest tests passing (auth, subscription, battle-no-regression, stripe-webhook, pricing-flow)
+- [x] All 74 Vitest tests passing (8 test files, all green)
 - [x] Docker stack fully building and running (`docker compose up --build`)
-- [x] API health: `http://localhost:3001/health` → 292 Pokémon in DB
+- [x] API health: `http://localhost:3001/health` → Pokémon in DB
 - [x] Web SPA serving at `http://localhost:3002`
 - [x] Repo pushed to https://github.com/urielreyna06/pokemon-battle-rooms
 - [x] Husky pre-commit hook initialized (`bun run prepare` done)
@@ -204,9 +210,26 @@ All core features are implemented and the Docker stack is confirmed healthy:
 - [x] Spectator mode (frontend-only; SSE already open to any authenticated user; isSpectator guard on timer/autoSubmit; SpectatorPanel + VictoryOverlay spectator path)
 - [x] Turn order by move priority + speed — switches first, then `move.priority` desc, then effective speed desc (paralysis halves speed), coin flip for exact ties (`battleEngine.ts:processTurn`)
 - [x] `getTypeMultiplier` optimized — single DB query per move (was N queries for dual-type defenders)
-- [x] Pokémon catalog filters — `GET /pokemon?name=&type=` backend query params; type filter chips + name search wired server-side in `team.$code.tsx`
+- [x] Browser smoke test: golden path passes 100% — auth (Clerk ticket strategy) → room create/join → team selection → battle start → turn timer → SSE real-time → spectator → shiny gate (`/tmp/smoke-runner/smoke-test.mjs`)
+- [x] Load all Pokémon — `GET /pokemon?limit=1000` cap raised; `getAllPokemon()` in `api.ts` with 24h localStorage cache (key `pokebattle_all_pokemon`); `clearPokemonCache()` and Refresh button
+- [x] 429 retry — `fetchWithRetry(url, retries=3)` with 1s delay in `api.ts`
+- [x] Scrollable Pokémon grid — `maxHeight: 60vh, overflowY: auto` on grid container in `team.$code.tsx`
+- [x] Multi-type OR filter — `?type=fire,water` comma-joined; MongoDB `$in`; `string[]` state with `toggleType`; multi-select chips with Clear Filters button
+- [x] HP bar redesign — gradient fill green→yellow→red by HP%, numeric HP display, DS-style track (`HPBar.tsx`)
+- [x] Attack menu redesign — 2×2 grid, move name + PP display (`move.pp ?? '--'`), type label + damage class icon, power top-right (`MoveButton.tsx`); `pp?: number` added to `BattleMove` type
+- [x] Forced switch after faint — `useEffect` on `myActive?.currentHp`; sets `forcedSwitch=true` + `phase='switch'`; SwitchMenu shows "CHOOSE NEXT!" and hides Cancel when `isForcedSwitch=true`
+- [x] Battle UI contrast — distinct panel backgrounds (`OpponentInfo`: `rgba(20,16,26,0.92)`, `MyInfo`: `rgba(10,8,20,0.95)`); turn counter color `#f0e8d0` (was invisible `#2a1f2e`)
+- [x] Regression test suite — `battle-faint-switch.test.ts`: faint detection, alive-backup check, forced switch `bothPlayersActed` flow, `BattleMove.pp` optional field, full attack→faint→switch→continue scenario (12 tests)
+- [x] Full PokeAPI pagination — `import-pokemon.ts` now follows `next` links across all pages (was hardcoded to 300); re-run importer after rebuilding to get all Pokémon
+- [x] Search bar Enter key — `onKeyDown` handler in `team.$code.tsx` triggers `loadPokemon(0)` on Enter; works alongside type filters
+- [x] Pokémon card UI redesign — `minmax(90px, 1fr)` grid, `maxWidth: 110px` per card, 60×60 sprite cap, name truncated with ellipsis, type badges in `flexWrap` container with 2px gap
+- [x] Turn spam prevention hardened — `sendAction` sets `phase='busy'` before async call; all buttons disabled until opponent acts and new turn starts; verified no race condition
+- [x] Forced switch SwitchMenu filtering — SwitchMenu now shows only alive non-active team members during forced switch (`isForcedSwitch=true`)
+- [x] Battle UI DS Black/White aesthetics — richer gradient bg `#0d1b2a→#1b2838→#0a0a12`; 8px border-radius on all panels; subtle white borders; Pokémon name labels 16px bold `#f0e8d0`; `FightPanel` separator border
+- [x] Pokémon blocking across players — backend validates no duplicate Pokémon IDs in `POST /rooms/:code/ready` (returns `{error:'duplicate_pokemon',duplicates:[...]}`); frontend polls room every 3s, shows opponent picks at 0.4 opacity with "TAKEN" badge, blocks selection with toast
+- [x] New test files: `pokemon-blocking.test.ts` (9 tests), `battle-turn-order.test.ts` (16 tests); 6 tests added to `battle-faint-switch.test.ts`; total 74 tests (8 files)
 
 ### Remaining
 
 - [ ] Revoke/rotate GitHub tokens shared in session (PAT + 2 classic tokens for urielreyna06)
-- [ ] End-to-end browser smoke test: create room → join → select team → battle → confirm shiny gate works
+- [ ] Re-run importer after Docker rebuild to load ALL Pokémon: `docker compose --profile import run --rm importer`

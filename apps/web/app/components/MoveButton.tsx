@@ -62,6 +62,18 @@ export function MoveButton({ move, disabled = false, selected = false, onClick }
         {move.name.replace(/-/g, ' ')}
       </span>
 
+      {/* PP display */}
+      <span
+        style={{
+          fontSize: '6px',
+          fontFamily: "'VT323', monospace",
+          color: disabled ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.55)',
+          letterSpacing: '0.02em',
+        }}
+      >
+        PP {move.pp ?? '--'}/{move.pp ?? '--'}
+      </span>
+
       {/* Bottom row: type label + damage class icon */}
       <span style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }}>
         <span

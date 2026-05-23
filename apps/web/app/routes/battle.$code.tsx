@@ -49,6 +49,7 @@ function BattlePage() {
   const [anim, setAnim] = useState<AnimState>(null);
   const [toast, setToast] = useState<ToastState>(null);
   const [timeLeft, setTimeLeft] = useState(TURN_TIMEOUT_S);
+  const [forcedSwitch, setForcedSwitch] = useState(false);
   const prevLogLen = useRef(0);
   const evtSource = useRef<EventSource | null>(null);
   const autoSubmitRef = useRef<() => void>(() => {});
@@ -94,6 +95,7 @@ function BattlePage() {
         setPhase('busy');
       } else if (phaseRef.current === 'busy') {
         // New turn started, back to menu
+        setForcedSwitch(false);
         setPhase('menu');
       }
     }
@@ -165,6 +167,16 @@ function BattlePage() {
     };
   });
 
+  // Detect when active Pokémon faints and force a switch
+  useEffect(() => {
+    if (myActive && myActive.currentHp <= 0 && battle?.status === 'active' && phase === 'menu') {
+      const hasAlive = myState?.team.some(
+        (p) => p.instanceId !== myState.activePokemonId && p.currentHp > 0
+      );
+      if (hasAlive) { setForcedSwitch(true); setPhase('switch'); }
+    }
+  }, [myActive?.currentHp, battle?.status, phase]);
+
   useEffect(() => {
     if (isSpectator || phase !== 'menu' || battle?.status !== 'active') return;
     const id = setInterval(() => {
@@ -189,7 +201,7 @@ function BattlePage() {
     <div
       style={{
         minHeight: '100vh',
-        background: 'linear-gradient(180deg, #1a0838 0%, #08060e 40%, #08060e 100%)',
+        background: 'linear-gradient(180deg, #0d1b2a 0%, #1b2838 30%, #0a0a12 100%)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -262,7 +274,7 @@ function BattlePage() {
             transform: 'translate(-50%, -50%)',
             fontFamily: "'Press Start 2P', monospace",
             fontSize: '7px',
-            color: '#2a1f2e',
+            color: '#f0e8d0',
             letterSpacing: '0.06em',
           }}
         >
@@ -297,6 +309,7 @@ function BattlePage() {
           <SwitchMenu
             player={myState!}
             canAct={canAct}
+            isForcedSwitch={forcedSwitch}
             onSwitch={(instanceId) => sendAction({ type: 'switch', targetInstanceId: instanceId })}
             onCancel={() => setPhase('menu')}
           />
@@ -324,11 +337,13 @@ function OpponentInfo({ pokemon, player, anim }: { pokemon: BattlePokemon; playe
   return (
     <div
       style={{
-        background: '#14101a',
+        background: 'rgba(20, 16, 26, 0.92)',
         border: '3px solid #2a1f2e',
-        borderRadius: '4px',
+        borderBottom: '2px solid #3a2e4a',
+        borderRadius: '8px',
         padding: '10px 12px',
         boxShadow: '0 4px 0 #000',
+        borderTop: '1px solid rgba(255,255,255,0.07)',
       }}
     >
       {/* Name + types row */}
@@ -336,8 +351,9 @@ function OpponentInfo({ pokemon, player, anim }: { pokemon: BattlePokemon; playe
         <span
           style={{
             fontFamily: "'Silkscreen', monospace",
-            fontSize: '13px',
-            color: '#f8efd1',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            color: '#f0e8d0',
             textTransform: 'capitalize',
             letterSpacing: '0.04em',
           }}
@@ -379,19 +395,22 @@ function MyInfo({ pokemon, player }: { pokemon: BattlePokemon; player: BattlePla
   return (
     <div
       style={{
-        background: '#14101a',
+        background: 'rgba(10, 8, 20, 0.95)',
         border: '3px solid #2a1f2e',
-        borderRadius: '4px',
+        borderTop: '2px solid #2a1f3a',
+        borderRadius: '8px',
         padding: '10px 12px',
         boxShadow: '0 4px 0 #000',
+        borderBottom: '1px solid rgba(255,255,255,0.07)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
         <span
           style={{
             fontFamily: "'Silkscreen', monospace",
-            fontSize: '13px',
-            color: '#f8efd1',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            color: '#f0e8d0',
             textTransform: 'capitalize',
             letterSpacing: '0.04em',
           }}
@@ -438,7 +457,12 @@ function FightPanel({
   onSwitchMenu: () => void;
 }) {
   return (
-    <div>
+    <div
+      style={{
+        borderTop: '2px solid rgba(255,255,255,0.1)',
+        paddingTop: '8px',
+      }}
+    >
       {/* 2x2 move grid */}
       <div
         style={{
@@ -466,7 +490,7 @@ function FightPanel({
           background: '#2a1f2e',
           color: '#f0e8d0',
           border: '3px solid #14101a',
-          borderRadius: '4px',
+          borderRadius: '8px',
           padding: '10px',
           fontFamily: "'Press Start 2P', monospace",
           fontSize: '8px',
@@ -485,39 +509,56 @@ function FightPanel({
 function SwitchMenu({
   player,
   canAct,
+  isForcedSwitch = false,
   onSwitch,
   onCancel,
 }: {
   player: BattlePlayerState;
   canAct: boolean;
+  isForcedSwitch?: boolean;
   onSwitch: (instanceId: string) => void;
   onCancel: () => void;
 }) {
+  // Filter team for forced switch: only alive and not active
+  const visibleTeam = isForcedSwitch
+    ? player.team.filter(p => p.instanceId !== player.activePokemonId && p.currentHp > 0)
+    : player.team;
+
   return (
-    <div>
+    <div
+      style={{
+        background: 'rgba(15,10,25,0.90)',
+        border: '3px solid #2a1f2e',
+        borderRadius: '8px',
+        padding: '10px 12px',
+        boxShadow: '0 4px 0 #000',
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-        <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: '8px', color: '#f8efd1', letterSpacing: '0.06em' }}>
-          SWITCH TO:
+        <span style={{ fontFamily: "'Press Start 2P', monospace", fontSize: '8px', color: isForcedSwitch ? '#e84028' : '#f8efd1', letterSpacing: '0.06em' }}>
+          {isForcedSwitch ? 'CHOOSE NEXT!' : 'SWITCH TO:'}
         </span>
-        <button
-          onClick={onCancel}
-          style={{
-            background: '#2a1f2e',
-            color: '#f0e8d0',
-            border: '2px solid #14101a',
-            borderRadius: '4px',
-            padding: '5px 10px',
-            fontFamily: "'Press Start 2P', monospace",
-            fontSize: '6px',
-            cursor: 'pointer',
-            boxShadow: '0 2px 0 #14101a',
-          }}
-        >
-          ✕ CANCEL
-        </button>
+        {!isForcedSwitch && (
+          <button
+            onClick={onCancel}
+            style={{
+              background: '#2a1f2e',
+              color: '#f0e8d0',
+              border: '2px solid #14101a',
+              borderRadius: '8px',
+              padding: '5px 10px',
+              fontFamily: "'Press Start 2P', monospace",
+              fontSize: '6px',
+              cursor: 'pointer',
+              boxShadow: '0 2px 0 #14101a',
+            }}
+          >
+            ✕ CANCEL
+          </button>
+        )}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-        {player.team.map((p) => {
+        {visibleTeam.map((p) => {
           const isActive = p.instanceId === player.activePokemonId;
           const isFainted = p.currentHp <= 0;
           const isDisabled = isActive || isFainted || !canAct;
@@ -528,7 +569,7 @@ function SwitchMenu({
               style={{
                 background: isActive ? '#1a0f1e' : isFainted ? '#0a080e' : '#14101a',
                 border: `3px solid ${isActive ? '#e84028' : isFainted ? '#1a0f1e' : '#2a1f2e'}`,
-                borderRadius: '4px',
+                borderRadius: '8px',
                 padding: '8px',
                 textAlign: 'center',
                 cursor: isDisabled ? 'not-allowed' : 'pointer',
@@ -576,9 +617,10 @@ function SpectatorPanel() {
         justifyContent: 'center',
         gap: '12px',
         padding: '16px',
-        background: '#14101a',
+        background: 'rgba(15,10,25,0.90)',
         border: '3px solid #2a1f2e',
-        borderRadius: '4px',
+        borderRadius: '8px',
+        boxShadow: '0 4px 0 #000',
       }}
     >
       <span style={{ fontSize: '18px' }}>👁</span>
@@ -598,9 +640,10 @@ function WaitingPanel() {
         justifyContent: 'center',
         gap: '12px',
         padding: '16px',
-        background: '#14101a',
+        background: 'rgba(15,10,25,0.90)',
         border: '3px solid #2a1f2e',
-        borderRadius: '4px',
+        borderRadius: '8px',
+        boxShadow: '0 4px 0 #000',
       }}
     >
       <div

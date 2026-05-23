@@ -29,8 +29,10 @@ function TeamSelectPage() {
   const [submitting, setSubmitting] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState<string[]>([]);
+  const [loadingAll, setLoadingAll] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
+  const [opponentPokemonIds, setOpponentPokemonIds] = useState<number[]>([]);
 
   // Once confirmed, poll until battle starts
   useEffect(() => {
@@ -50,7 +52,27 @@ function TeamSelectPage() {
     poll();
     timer = setInterval(poll, 1500);
     return () => clearInterval(timer);
-  }, [confirmed, code, navigate]);
+  }, [confirmed, code, navigate, api]);
+
+  // Poll opponent's team selection (every 3 seconds)
+  useEffect(() => {
+    if (confirmed) return; // Stop polling once we've confirmed
+    let timer: ReturnType<typeof setInterval>;
+
+    async function pollOpponentTeam() {
+      try {
+        const data = await api.getRoomState(code);
+        const opponentPlayer = data.room.players.find((p) => p.id !== playerId);
+        if (opponentPlayer) {
+          setOpponentPokemonIds(opponentPlayer.team);
+        }
+      } catch { /* ignore */ }
+    }
+
+    pollOpponentTeam();
+    timer = setInterval(pollOpponentTeam, 3000);
+    return () => clearInterval(timer);
+  }, [code, playerId, confirmed, api]);
 
   useEffect(() => {
     loadPokemon(0);
@@ -63,7 +85,7 @@ function TeamSelectPage() {
         PAGE_SIZE,
         newOffset,
         search.trim() || undefined,
-        typeFilter || undefined
+        typeFilter.length > 0 ? typeFilter : undefined
       );
       setAllPokemon((prev) => newOffset === 0 ? data.pokemon : [...prev, ...data.pokemon]);
       setTotal(data.total);
@@ -75,7 +97,34 @@ function TeamSelectPage() {
     }
   }
 
+  function toggleType(type: string) {
+    setTypeFilter((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+  }
+
+  async function handleLoadAll(refresh = false) {
+    setLoadingAll(true);
+    try {
+      if (refresh) api.clearPokemonCache();
+      const all = await api.getAllPokemon();
+      setAllPokemon(all);
+      setTotal(all.length);
+      setOffset(all.length);
+    } catch (err) {
+      setToast({ msg: err instanceof Error ? err.message : 'Load error', kind: 'error' });
+    } finally {
+      setLoadingAll(false);
+    }
+  }
+
   function togglePokemon(id: number) {
+    // Guard: prevent selecting opponent's Pokémon
+    if (opponentPokemonIds.includes(id)) {
+      setToast({ msg: 'Your opponent has already locked in this Pokémon!', kind: 'warn' });
+      return;
+    }
+
     setSelected((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
       if (prev.length >= 6) {
@@ -91,13 +140,36 @@ function TeamSelectPage() {
       setToast({ msg: 'Select at least 1 Pokémon!', kind: 'warn' });
       return;
     }
+
+    // Check for duplicates with opponent's confirmed team
+    const duplicates = selected.filter((id) => opponentPokemonIds.includes(id));
+    if (duplicates.length > 0) {
+      setToast({
+        msg: `Cannot use: ${duplicates.map((id) => allPokemon.find((p) => p.pokedexId === id)?.name || `#${id}`).join(', ')}. Your opponent already locked them in!`,
+        kind: 'error',
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
       await api.submitTeam(code, playerId!, selected);
-      await api.setReady(code, playerId!);
+      const readyResp = await api.setReady(code, playerId!);
       setConfirmed(true);
     } catch (err) {
-      setToast({ msg: err instanceof Error ? err.message : 'Submit error', kind: 'error' });
+      const errMsg = err instanceof Error ? err.message : 'Submit error';
+
+      // Check if error is about duplicate Pokémon from server
+      if (errMsg.includes('duplicate_pokemon') || errMsg.includes('already chosen')) {
+        setToast({
+          msg: 'Your opponent locked in one of your selected Pokémon. Please remove the duplicate(s) and try again.',
+          kind: 'error',
+        });
+        setSubmitting(false);
+        return;
+      }
+
+      setToast({ msg: errMsg, kind: 'error' });
       setSubmitting(false);
     }
   }
@@ -197,6 +269,56 @@ function TeamSelectPage() {
       </div>
 
       <div style={{ padding: '16px' }}>
+        {/* Opponent team indicator */}
+        {opponentPokemonIds.length > 0 && (
+          <div
+            style={{
+              background: '#1a0f1e',
+              border: '2px solid #5b4a5e',
+              borderRadius: '4px',
+              padding: '12px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+            }}
+          >
+            <span style={{ fontFamily: "'VT323', monospace", fontSize: '14px', color: '#a08ec0' }}>
+              ⚔ Opponent:
+            </span>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {opponentPokemonIds.map((pokedexId) => {
+                const pkmn = allPokemon.find((p) => p.pokedexId === pokedexId);
+                return (
+                  <div
+                    key={pokedexId}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: '#14101a',
+                      border: '1px solid #5b4a5e',
+                      borderRadius: '3px',
+                      padding: '4px 8px',
+                    }}
+                  >
+                    {pkmn ? (
+                      <>
+                        <img src={pkmn.spriteUrl} alt={pkmn.name} style={{ width: '24px', height: '24px', imageRendering: 'pixelated' }} />
+                        <span style={{ fontFamily: "'VT323', monospace", fontSize: '12px', color: '#f0e8d0', textTransform: 'capitalize' }}>
+                          {pkmn.name}
+                        </span>
+                      </>
+                    ) : (
+                      <span style={{ fontFamily: "'VT323', monospace", fontSize: '12px', color: '#f0e8d0' }}>#{pokedexId}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Selected team preview */}
         {selected.length > 0 && (
           <div
@@ -275,6 +397,7 @@ function TeamSelectPage() {
           placeholder="Search Pokémon..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') loadPokemon(0); }}
         />
 
         {/* Type filter chips */}
@@ -284,10 +407,10 @@ function TeamSelectPage() {
           </div>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             <button
-              onClick={() => setTypeFilter('')}
+              onClick={() => setTypeFilter([])}
               style={{
-                background: typeFilter === '' ? '#e84028' : '#2a1f2e',
-                color: typeFilter === '' ? '#fff' : '#f0e8d0',
+                background: typeFilter.length === 0 ? '#e84028' : '#2a1f2e',
+                color: typeFilter.length === 0 ? '#fff' : '#f0e8d0',
                 border: '2px solid #14101a',
                 borderRadius: '4px',
                 padding: '6px 12px',
@@ -303,10 +426,10 @@ function TeamSelectPage() {
             {['normal', 'fire', 'water', 'electric', 'grass', 'ice', 'fighting', 'poison', 'ground', 'flying', 'psychic', 'bug', 'rock', 'ghost', 'dragon', 'dark', 'steel', 'fairy'].map((type) => (
               <button
                 key={type}
-                onClick={() => setTypeFilter(typeFilter === type ? '' : type)}
+                onClick={() => toggleType(type)}
                 style={{
-                  background: typeFilter === type ? '#e84028' : '#2a1f2e',
-                  color: typeFilter === type ? '#fff' : '#f0e8d0',
+                  background: typeFilter.includes(type) ? '#e84028' : '#2a1f2e',
+                  color: typeFilter.includes(type) ? '#fff' : '#f0e8d0',
                   border: '2px solid #14101a',
                   borderRadius: '4px',
                   padding: '6px 12px',
@@ -323,17 +446,80 @@ function TeamSelectPage() {
           </div>
         </div>
 
+        {/* Action buttons row */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+          {(search || typeFilter.length > 0) && (
+            <button
+              onClick={() => { setSearch(''); setTypeFilter([]); }}
+              style={{
+                background: '#2a1f2e',
+                color: '#f0e8d0',
+                border: '2px solid #14101a',
+                borderRadius: '4px',
+                padding: '6px 12px',
+                fontFamily: "'VT323', monospace",
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.1s',
+              }}
+            >
+              ✕ CLEAR FILTERS
+            </button>
+          )}
+          <button
+            onClick={() => handleLoadAll(false)}
+            disabled={loadingAll}
+            style={{
+              background: '#1a0f2e',
+              color: '#a08ec0',
+              border: '2px solid #2a1f4e',
+              borderRadius: '4px',
+              padding: '6px 12px',
+              fontFamily: "'VT323', monospace",
+              fontSize: '14px',
+              cursor: loadingAll ? 'not-allowed' : 'pointer',
+              opacity: loadingAll ? 0.6 : 1,
+              transition: 'all 0.1s',
+            }}
+          >
+            {loadingAll ? 'LOADING...' : '⬇ LOAD ALL'}
+          </button>
+          <button
+            onClick={() => handleLoadAll(true)}
+            disabled={loadingAll}
+            style={{
+              background: '#1a0f2e',
+              color: '#a08ec0',
+              border: '2px solid #2a1f4e',
+              borderRadius: '4px',
+              padding: '6px 12px',
+              fontFamily: "'VT323', monospace",
+              fontSize: '14px',
+              cursor: loadingAll ? 'not-allowed' : 'pointer',
+              opacity: loadingAll ? 0.6 : 1,
+              transition: 'all 0.1s',
+            }}
+          >
+            ↺ REFRESH
+          </button>
+        </div>
+
         {/* Pokémon grid */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))',
             gap: '8px',
+            maxHeight: '60vh',
+            overflowY: 'auto',
+            paddingRight: '8px',
           }}
         >
           {filtered.map((p) => {
             const isSelected = selected.includes(p.pokedexId);
+            const isOpponentSelected = opponentPokemonIds.includes(p.pokedexId);
             const selIdx = isSelected ? selected.indexOf(p.pokedexId) + 1 : null;
+
             return (
               <div
                 key={p.pokedexId}
@@ -341,15 +527,40 @@ function TeamSelectPage() {
                 style={{
                   position: 'relative',
                   background: isSelected ? '#1a0f1e' : '#14101a',
-                  border: `3px solid ${isSelected ? '#e84028' : '#2a1f2e'}`,
+                  border: `3px solid ${isSelected ? '#e84028' : isOpponentSelected ? '#5b4a5e' : '#2a1f2e'}`,
                   borderRadius: '4px',
                   padding: '8px 6px',
-                  cursor: 'pointer',
+                  cursor: isOpponentSelected ? 'not-allowed' : 'pointer',
                   textAlign: 'center',
                   boxShadow: isSelected ? '0 0 10px rgba(232,64,40,0.3)' : '0 3px 0 #000',
                   transition: 'border-color 0.1s, box-shadow 0.1s',
+                  maxWidth: '110px',
+                  overflow: 'hidden',
+                  opacity: isOpponentSelected ? 0.4 : 1,
                 }}
               >
+                {isOpponentSelected && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontFamily: "'Press Start 2P', monospace",
+                      fontSize: '9px',
+                      color: '#f0e8d0',
+                      background: 'rgba(0, 0, 0, 0.6)',
+                      borderRadius: '2px',
+                      zIndex: 10,
+                    }}
+                  >
+                    TAKEN
+                  </div>
+                )}
                 {selIdx && (
                   <div
                     style={{
@@ -367,6 +578,7 @@ function TeamSelectPage() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       border: '2px solid #14101a',
+                      zIndex: 11,
                     }}
                   >
                     {selIdx}
@@ -375,7 +587,7 @@ function TeamSelectPage() {
                 <img
                   src={p.spriteUrl}
                   alt={p.name}
-                  style={{ width: '72px', height: '72px', imageRendering: 'pixelated', display: 'block', margin: '0 auto' }}
+                  style={{ maxWidth: '60px', maxHeight: '60px', objectFit: 'contain', imageRendering: 'pixelated', display: 'block', margin: '0 auto' }}
                 />
                 <div
                   style={{
@@ -385,11 +597,14 @@ function TeamSelectPage() {
                     textTransform: 'capitalize',
                     marginTop: '4px',
                     letterSpacing: '0.02em',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {p.name.replace(/-/g, ' ')}
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '3px', marginTop: '4px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '2px', marginTop: '4px', flexWrap: 'wrap' }}>
                   {p.types.map((t) => (
                     <TypeBadge key={t} type={t as PokemonType} size="xs" />
                   ))}
@@ -404,7 +619,7 @@ function TeamSelectPage() {
         </div>
 
         {/* Load more */}
-        {offset < total && !search && !typeFilter && (
+        {offset < total && !search && typeFilter.length === 0 && (
           <div style={{ textAlign: 'center', marginTop: '16px' }}>
             <button
               onClick={() => loadPokemon(offset)}

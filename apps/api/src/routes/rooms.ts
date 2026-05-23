@@ -160,6 +160,25 @@ roomRoutes.post("/:code/ready", async (c) => {
       return c.json({ error: "You must select a team before marking ready" }, 400);
     }
 
+    // Check for duplicate pokémon with opponent's team (if opponent has already readied)
+    const otherPlayerIndex = room.players.findIndex((p, idx) => idx !== playerIndex);
+    if (otherPlayerIndex !== -1 && room.players[otherPlayerIndex].isReady) {
+      const currentTeam = room.players[playerIndex].team;
+      const opponentTeam = room.players[otherPlayerIndex].team;
+      const duplicates = currentTeam.filter((pokedexId) => opponentTeam.includes(pokedexId));
+
+      if (duplicates.length > 0) {
+        return c.json(
+          {
+            error: "duplicate_pokemon",
+            message: "Some Pokémon are already chosen by your opponent",
+            duplicates,
+          },
+          400
+        );
+      }
+    }
+
     // Mark this player as ready
     await db.collection<RoomDoc>("rooms").updateOne(
       { code },

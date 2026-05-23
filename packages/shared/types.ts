@@ -79,6 +79,7 @@ export interface BattleMove {
   priority: number;
   damageClass: "physical" | "special" | "status";
   effect: string;
+  pp?: number;
 }
 
 export interface BattlePokemonStats {

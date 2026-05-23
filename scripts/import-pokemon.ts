@@ -13,7 +13,6 @@ import { MongoClient } from "mongodb";
 const MONGO_URL = process.env.MONGO_URL ?? "mongodb://localhost:27017/pokemon_battle";
 const POKEAPI = "https://pokeapi.co/api/v2";
 const DELAY_MS = 120; // Polite delay between requests to avoid rate limits
-const POKEMON_LIMIT = 300;
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -47,6 +46,7 @@ async function fetchJSON<T>(url: string, retries = 3): Promise<T> {
 interface PokeListResult {
   results: Array<{ name: string; url: string }>;
   count: number;
+  next?: string | null;
 }
 
 interface PokeDetail {
@@ -131,13 +131,24 @@ async function main() {
     await sleep(DELAY_MS);
   }
 
-  // ── Step 2: Fetch first 300 Pokémon list ──────────────────────────────
-  console.log(`\n🦊 Fetching list of ${POKEMON_LIMIT} Pokémon...`);
-  const list = await fetchJSON<PokeListResult>(
-    `${POKEAPI}/pokemon?limit=${POKEMON_LIMIT}&offset=0`
-  );
-  const pokemonEntries = list.results;
-  console.log(`  Found ${pokemonEntries.length} Pokémon to process.`);
+  // ── Step 2: Fetch ALL Pokémon list with pagination ────────────────────
+  console.log(`\n🦊 Fetching all Pokémon from PokeAPI...`);
+  const pokemonEntries: Array<{ name: string; url: string }> = [];
+  let nextUrl: string | null | undefined = `${POKEAPI}/pokemon?limit=100&offset=0`;
+
+  while (nextUrl) {
+    try {
+      const list = await fetchJSON<PokeListResult>(nextUrl);
+      pokemonEntries.push(...list.results);
+      console.log(`  Fetched ${list.results.length} Pokémon (total: ${pokemonEntries.length})`);
+      nextUrl = list.next;
+      if (nextUrl) await sleep(DELAY_MS);
+    } catch (err) {
+      console.error(`  ✗ Error fetching page:`, err);
+      break;
+    }
+  }
+  console.log(`  Found ${pokemonEntries.length} Pokémon total to process.`);
 
   let imported = 0;
   let excluded = 0;

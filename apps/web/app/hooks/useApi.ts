@@ -10,7 +10,7 @@
  *   const { code } = await api.createRoom();
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useAuth } from '@clerk/react';
 import type {
   CreateRoomResponse,
@@ -45,6 +45,12 @@ export function useApi() {
     [getToken]
   );
 
+  const pokemonCache = useMemo(() => new Map<string, PokemonListResponse>(), []);
+
+  const clearPokemonCache = useCallback(() => {
+    pokemonCache.clear();
+  }, [pokemonCache]);
+
   return {
     // ── Rooms ──────────────────────────────────────────────────────────────
     createRoom: () =>
@@ -72,8 +78,26 @@ export function useApi() {
       request<RoomStateResponse>(`/rooms/${code}`),
 
     // ── Pokémon catalog ────────────────────────────────────────────────────
-    getPokemon: (limit = 20, offset = 0) =>
-      request<PokemonListResponse>(`/pokemon?limit=${limit}&offset=${offset}`),
+    getPokemon: (limit = 20, offset = 0, name?: string, types?: string[]) => {
+      const params = new URLSearchParams();
+      params.append('limit', String(limit));
+      params.append('offset', String(offset));
+      if (name) params.append('name', name);
+      if (types?.length) params.append('types', types.join(','));
+      return request<PokemonListResponse>(`/pokemon?${params.toString()}`);
+    },
+
+    getAllPokemon: async () => {
+      const cacheKey = 'all_pokemon';
+      if (pokemonCache.has(cacheKey)) {
+        return pokemonCache.get(cacheKey)!.pokemon;
+      }
+      const data = await request<PokemonListResponse>(`/pokemon?limit=1000`);
+      pokemonCache.set(cacheKey, data);
+      return data.pokemon;
+    },
+
+    clearPokemonCache,
 
     // ── Battle ─────────────────────────────────────────────────────────────
     submitAction: (roomCode: string, playerId: string, action: Action) =>

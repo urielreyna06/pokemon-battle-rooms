@@ -22,14 +22,17 @@ pokemonRoutes.use("*", requireAuth);
 pokemonRoutes.get("/", async (c) => {
   try {
     const db = await getDb();
-    const limit = Math.min(Number(c.req.query("limit") ?? 20), 100);
+    const limit = Math.min(Number(c.req.query("limit") ?? 20), 1000);
     const offset = Number(c.req.query("offset") ?? 0);
     const nameQuery = c.req.query("name")?.trim().toLowerCase();
     const typeQuery = c.req.query("type")?.trim().toLowerCase();
 
     const filter: Record<string, unknown> = {};
     if (nameQuery) filter["name"] = { $regex: nameQuery, $options: "i" };
-    if (typeQuery) filter["types"] = typeQuery;
+    if (typeQuery) {
+      const types = typeQuery.split(',').map(t => t.trim()).filter(Boolean);
+      filter["types"] = types.length === 1 ? types[0] : { $in: types };
+    }
 
     const [pokemon, total, shinyUnlocked] = await Promise.all([
       db
