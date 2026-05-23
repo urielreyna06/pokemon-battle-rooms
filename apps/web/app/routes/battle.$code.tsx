@@ -155,8 +155,8 @@ function BattlePage() {
 
   if (!battle) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#08060e' }}>
-        <div style={{ width: '40px', height: '40px', border: '4px solid #2a1f2e', borderTopColor: '#e84028', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e8e8d8' }}>
+        <div style={{ width: '40px', height: '40px', border: '4px solid #b0a890', borderTopColor: '#282820', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -166,7 +166,7 @@ function BattlePage() {
     <div
       style={{
         minHeight: '100vh',
-        background: 'linear-gradient(180deg, #1a3a1a 0%, #2d4a1e 20%, #1b2838 60%, #0a0a12 100%)',
+        background: '#e8e8d8',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -178,32 +178,32 @@ function BattlePage() {
       {showForfeit && <ForfeitModal onConfirm={handleForfeit} onCancel={() => setShowForfeit(false)} />}
 
       {phase === 'finished' && (
-        <VictoryOverlay won={iWon} isSpectator={isSpectator} winnerPlayerId={battle.winnerPlayerId} players={battle.players} />
+        <VictoryOverlay won={iWon} isSpectator={isSpectator} winnerPlayerId={battle.winnerPlayerId} players={battle.players} endReason={battle.endReason} />
       )}
 
-      <div style={{ padding: '12px 16px 0', flexShrink: 0 }}>
-        {oppState && oppActive && <OpponentInfo pokemon={oppActive} player={oppState} />}
-      </div>
-
-      {/* Battle scene: sprites + turn counter */}
+      {/* Battle scene: sky-to-grass field with overlaid info panels */}
       <div
         style={{
-          flex: 1,
           position: 'relative',
-          minHeight: '180px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 20px',
+          height: '260px',
+          background: 'linear-gradient(180deg, #5ab8e8 0%, #8ed0f8 40%, #68b840 43%, #4a9030 100%)',
+          flexShrink: 0,
           overflow: 'hidden',
         }}
       >
-        <div style={{ position: 'absolute', top: '10px', right: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <PokemonSprite spriteUrl={oppActive?.spriteUrl ?? ''} name={oppActive?.name ?? ''} size="md" animating={anim?.target === 'opp' ? anim.type : null} />
-          <div style={{ width: '80px', height: '16px', background: 'radial-gradient(ellipse, rgba(0,0,0,0.4) 0%, transparent 70%)', margin: '-8px auto 0' }} />
+        {/* OpponentInfo — top-left overlay */}
+        <div style={{ position: 'absolute', top: '12px', left: '12px', zIndex: 2 }}>
+          {oppState && oppActive && <OpponentInfo pokemon={oppActive} player={oppState} />}
         </div>
 
-        <div style={{ position: 'absolute', bottom: '10px', left: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        {/* Opponent sprite — top-right */}
+        <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1 }}>
+          <PokemonSprite spriteUrl={oppActive?.spriteUrl ?? ''} name={oppActive?.name ?? ''} size="md" animating={anim?.target === 'opp' ? anim.type : null} />
+          <div style={{ width: '70px', height: '18px', background: 'radial-gradient(ellipse, rgba(0,60,0,0.5) 0%, transparent 70%)', marginTop: '-8px' }} />
+        </div>
+
+        {/* My sprite — bottom-left */}
+        <div style={{ position: 'absolute', bottom: '10px', left: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1 }}>
           <PokemonSprite
             spriteUrl={(isSpectator ? spectatorP2Active : myActive)?.spriteUrl ?? ''}
             name={(isSpectator ? spectatorP2Active : myActive)?.name ?? ''}
@@ -211,36 +211,44 @@ function BattlePage() {
             animating={anim?.target === 'me' ? anim.type : null}
             isBack
           />
-          <div style={{ width: '80px', height: '16px', background: 'radial-gradient(ellipse, rgba(0,0,0,0.4) 0%, transparent 70%)', margin: '-8px auto 0' }} />
+          <div style={{ width: '90px', height: '22px', background: 'radial-gradient(ellipse, rgba(0,60,0,0.5) 0%, transparent 70%)', marginTop: '-10px' }} />
         </div>
 
+        {/* MyInfo — bottom-right overlay */}
+        <div style={{ position: 'absolute', bottom: '12px', right: '12px', zIndex: 2 }}>
+          {isSpectator && spectatorP2 && spectatorP2Active ? (
+            <MyInfo pokemon={spectatorP2Active} player={spectatorP2} />
+          ) : myState && myActive ? (
+            <MyInfo pokemon={myActive} player={myState} />
+          ) : null}
+        </div>
+
+        {/* Turn counter — top-center badge */}
         <div
           style={{
             position: 'absolute',
-            top: '50%',
+            top: '8px',
             left: '50%',
-            transform: 'translate(-50%, -50%)',
+            transform: 'translateX(-50%)',
             fontFamily: "'Press Start 2P', monospace",
             fontSize: '7px',
-            color: '#f0e8d0',
-            letterSpacing: '0.06em',
+            color: '#ffffff',
+            background: 'rgba(0,0,0,0.28)',
+            padding: '4px 8px',
+            borderRadius: '3px',
+            zIndex: 3,
+            textShadow: '1px 1px 0 rgba(0,0,0,0.7)',
+            whiteSpace: 'nowrap',
+            textAlign: 'center',
           }}
         >
           Turn {battle.turn}
           {phase === 'menu' && battle.status === 'active' && (
-            <div style={{ color: timeLeft <= 10 ? '#e84028' : '#5b4a5e', marginTop: '2px' }}>
+            <div style={{ color: timeLeft <= 10 ? '#ff6644' : 'rgba(255,255,255,0.85)', marginTop: '2px' }}>
               {timeLeft}s
             </div>
           )}
         </div>
-      </div>
-
-      <div style={{ padding: '0 16px', flexShrink: 0 }}>
-        {isSpectator && spectatorP2 && spectatorP2Active ? (
-          <MyInfo pokemon={spectatorP2Active} player={spectatorP2} />
-        ) : myState && myActive ? (
-          <MyInfo pokemon={myActive} player={myState} />
-        ) : null}
       </div>
 
       <div style={{ padding: '8px 16px', flexShrink: 0 }}>
@@ -276,8 +284,8 @@ function BattlePage() {
             onClick={() => setShowForfeit(true)}
             style={{
               background: 'transparent',
-              color: '#5b4a5e',
-              border: '1px solid #2a1f2e',
+              color: '#888878',
+              border: '1px solid #b0a890',
               borderRadius: '4px',
               padding: '5px 16px',
               fontFamily: "'Press Start 2P', monospace",
@@ -287,12 +295,12 @@ function BattlePage() {
               transition: 'color 0.2s, border-color 0.2s',
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.color = '#e84028';
-              (e.currentTarget as HTMLButtonElement).style.borderColor = '#e84028';
+              (e.currentTarget as HTMLButtonElement).style.color = '#c01010';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = '#c01010';
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.color = '#5b4a5e';
-              (e.currentTarget as HTMLButtonElement).style.borderColor = '#2a1f2e';
+              (e.currentTarget as HTMLButtonElement).style.color = '#888878';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = '#b0a890';
             }}
           >
             ✕ FORFEIT
@@ -315,14 +323,14 @@ function SpectatorPanel() {
         justifyContent: 'center',
         gap: '12px',
         padding: '16px',
-        background: 'rgba(10, 8, 20, 0.90)',
-        border: '3px solid #2a1f2e',
-        borderRadius: '8px',
-        boxShadow: '0 4px 0 #000',
+        background: '#f0f0e0',
+        border: '3px solid #282820',
+        borderRadius: '4px',
+        boxShadow: '2px 2px 0 rgba(0,0,0,0.3)',
       }}
     >
       <span style={{ fontSize: '18px' }}>👁</span>
-      <span style={{ fontFamily: "'VT323', monospace", fontSize: '22px', color: '#5b4a5e', letterSpacing: '0.04em' }}>
+      <span style={{ fontFamily: "'VT323', monospace", fontSize: '22px', color: '#484838', letterSpacing: '0.04em' }}>
         Spectating — read only
       </span>
     </div>
@@ -338,24 +346,24 @@ function WaitingPanel() {
         justifyContent: 'center',
         gap: '12px',
         padding: '16px',
-        background: 'rgba(10, 8, 20, 0.90)',
-        border: '3px solid #2a1f2e',
-        borderRadius: '8px',
-        boxShadow: '0 4px 0 #000',
+        background: '#f0f0e0',
+        border: '3px solid #282820',
+        borderRadius: '4px',
+        boxShadow: '2px 2px 0 rgba(0,0,0,0.3)',
       }}
     >
       <div
         style={{
           width: '16px',
           height: '16px',
-          border: '3px solid #2a1f2e',
-          borderTopColor: '#e84028',
+          border: '3px solid #b0a890',
+          borderTopColor: '#282820',
           borderRadius: '50%',
           animation: 'spin 0.8s linear infinite',
           flexShrink: 0,
         }}
       />
-      <span style={{ fontFamily: "'VT323', monospace", fontSize: '22px', color: '#5b4a5e', letterSpacing: '0.04em' }}>
+      <span style={{ fontFamily: "'VT323', monospace", fontSize: '22px', color: '#484838', letterSpacing: '0.04em' }}>
         Waiting for opponent...
       </span>
     </div>

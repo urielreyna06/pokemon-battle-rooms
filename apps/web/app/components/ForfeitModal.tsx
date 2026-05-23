@@ -27,7 +27,15 @@ export function ForfeitModal({ onConfirm, onCancel }: {
           textAlign: 'center',
         }}
       >
-        <div style={{ fontSize: '28px', marginBottom: '10px' }}>🏳️</div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}>
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            {/* pole */}
+            <rect x="7" y="4" width="2.5" height="24" rx="1" fill="#a09080" />
+            {/* flag */}
+            <path d="M9.5 5 L26 10 L9.5 16 Z" fill="#e84028" />
+            <path d="M9.5 5 L26 10 L9.5 16 Z" stroke="#c02010" strokeWidth="0.5" />
+          </svg>
+        </div>
         <h3
           style={{
             fontFamily: "'Press Start 2P', monospace",

@@ -13,33 +13,46 @@ export function FightPanel({
   onSwitchMenu: () => void;
 }) {
   return (
-    <div style={{ borderTop: '2px solid rgba(255,255,255,0.1)', paddingTop: '8px' }}>
+    <div
+      style={{
+        background: '#f0f0e0',
+        border: '3px solid #282820',
+        borderRadius: '4px',
+        padding: '10px',
+        boxShadow: '2px 2px 0 rgba(0,0,0,0.3)',
+      }}
+    >
       <div
         style={{
           marginBottom: '8px',
-          padding: '5px 10px',
-          borderRadius: '4px',
-          background: canAct ? 'rgba(46,204,113,0.15)' : 'rgba(91,74,94,0.2)',
-          border: `1px solid ${canAct ? 'rgba(46,204,113,0.5)' : 'rgba(91,74,94,0.3)'}`,
+          padding: '4px 8px',
+          background: canAct ? 'rgba(0,140,60,0.12)' : 'rgba(100,90,80,0.12)',
+          border: `1px solid ${canAct ? 'rgba(0,140,60,0.35)' : 'rgba(100,90,80,0.25)'}`,
+          borderRadius: '2px',
           fontFamily: "'Press Start 2P', monospace",
-          fontSize: '7px',
-          color: canAct ? '#2ecc71' : '#5b4a5e',
+          fontSize: '6px',
+          color: canAct ? '#006020' : '#706050',
           textAlign: 'center',
           letterSpacing: '0.06em',
         }}
       >
-        {canAct ? '▶ YOUR TURN — choose an action' : '⏳ WAITING...'}
+        {canAct ? '▶ YOUR TURN — choose a move' : '⏳ WAITING...'}
       </div>
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
-          gap: '8px',
+          gap: '6px',
           marginBottom: '8px',
         }}
       >
         {pokemon.moves.map((move) => (
-          <MoveButton key={move.id} move={move} disabled={!canAct} onClick={() => onMove(move.id)} />
+          <MoveButton
+            key={move.id}
+            move={move}
+            disabled={!canAct || move.currentPp <= 0}
+            onClick={() => onMove(move.id)}
+          />
         ))}
       </div>
       <button
@@ -47,20 +60,20 @@ export function FightPanel({
         disabled={!canAct}
         style={{
           width: '100%',
-          background: '#2a1f2e',
-          color: '#f0e8d0',
-          border: '3px solid #14101a',
-          borderRadius: '8px',
-          padding: '10px',
+          background: '#e0e0d0',
+          color: '#282820',
+          border: '2px solid #282820',
+          borderRadius: '3px',
+          padding: '8px',
           fontFamily: "'Press Start 2P', monospace",
-          fontSize: '8px',
+          fontSize: '7px',
           cursor: canAct ? 'pointer' : 'not-allowed',
-          boxShadow: '0 3px 0 #14101a',
+          boxShadow: canAct ? '2px 2px 0 rgba(0,0,0,0.3)' : 'none',
           opacity: canAct ? 1 : 0.5,
           letterSpacing: '0.06em',
         }}
       >
-        ↔ SWITCH POKÉMON
+        ↔ SWITCH
       </button>
     </div>
   );

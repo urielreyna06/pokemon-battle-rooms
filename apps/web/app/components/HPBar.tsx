@@ -18,44 +18,37 @@ export function HPBar({
   width = '100%',
 }: HPBarProps) {
   const pct = Math.max(0, Math.min(100, (current / max) * 100));
-
-  const gradient =
-    pct > 50
-      ? 'linear-gradient(90deg, #2ecc71, #27ae60)'
-      : pct > 20
-      ? 'linear-gradient(90deg, #f39c12, #e67e22)'
-      : 'linear-gradient(90deg, #e74c3c, #c0392b)';
-
-  const barGlow =
-    pct > 50
-      ? 'inset 0 2px 0 rgba(255,255,255,0.35), 0 0 8px rgba(46,204,113,0.6)'
-      : pct > 20
-      ? 'inset 0 2px 0 rgba(255,255,255,0.35), 0 0 8px rgba(243,156,18,0.6)'
-      : 'inset 0 2px 0 rgba(255,255,255,0.35), 0 0 8px rgba(231,76,60,0.8)';
+  const barColor = pct > 50 ? '#58d050' : pct > 20 ? '#e8c018' : '#e02818';
 
   return (
     <div style={{ width }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span className="hp-label">HP</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <span
+          style={{
+            fontFamily: "'Press Start 2P', monospace",
+            fontSize: '7px',
+            color: '#484038',
+            letterSpacing: '0.04em',
+            flexShrink: 0,
+          }}
+        >
+          HP
+        </span>
         <div
           style={{
             flex: 1,
-            height: '18px',
-            borderRadius: '9px',
-            background: '#0a0818',
-            border: '2px solid rgba(255,255,255,0.35)',
+            height: '10px',
+            background: '#484038',
+            border: '2px solid #282020',
             overflow: 'hidden',
-            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,0,0,0.5)',
           }}
         >
           <div
             style={{
               width: `${pct}%`,
               height: '100%',
-              background: gradient,
-              borderRadius: '9px',
+              background: barColor,
               transition: 'width 0.4s ease, background 0.4s ease',
-              boxShadow: barGlow,
             }}
           />
         </div>
@@ -63,31 +56,39 @@ export function HPBar({
       {showNumeric && (
         <div
           style={{
-            marginTop: '6px',
+            marginTop: '4px',
             textAlign: 'right',
             fontFamily: "'VT323', monospace",
-            fontSize: '20px',
+            fontSize: '18px',
             lineHeight: 1,
-            color: '#d0c8e0',
+            color: '#282828',
           }}
         >
           {Math.max(0, Math.round(current))}
-          <span style={{ color: '#7a6a8a' }}>/{max}</span>
+          <span style={{ color: '#888880' }}>/{max}</span>
         </div>
       )}
       {showExp && (
-        <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span
             style={{
               fontFamily: "'Press Start 2P', monospace",
-              fontSize: '8px',
-              color: '#5b4a5e',
+              fontSize: '7px',
+              color: '#888880',
             }}
           >
             EXP
           </span>
-          <div className="flex-1 xp-track" style={{ flex: 1 }}>
-            <div className="xp-fill" style={{ width: `${expPct}%` }} />
+          <div
+            style={{
+              flex: 1,
+              height: '6px',
+              background: '#484038',
+              border: '1px solid #282020',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{ width: `${expPct}%`, height: '100%', background: '#4878f0' }} />
           </div>
         </div>
       )}

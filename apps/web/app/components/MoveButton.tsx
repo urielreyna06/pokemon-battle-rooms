@@ -17,7 +17,6 @@ const DAMAGE_CLASS_ICON: Record<BattleMove['damageClass'], string> = {
 };
 
 export function MoveButton({ move, disabled = false, selected = false, onClick }: MoveButtonProps) {
-  // BattleMove.type is string; cast to PokemonType for color lookup
   const type = move.type as PokemonType;
   const c = TYPE_COLORS[type] ?? TYPE_COLORS.normal;
   const icon = DAMAGE_CLASS_ICON[move.damageClass];
@@ -33,93 +32,82 @@ export function MoveButton({ move, disabled = false, selected = false, onClick }
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'flex-start',
-        gap: '4px',
-        padding: '8px',
+        gap: '3px',
+        padding: '8px 8px 6px',
         textAlign: 'left',
-        background: disabled ? '#3a2a3a' : isActive ? '#fff' : c.bg,
-        color: disabled ? '#5b4a5e' : isActive ? c.bg : c.text,
-        border: isActive ? `2px solid ${c.bg}` : '2px solid #14101a',
-        boxShadow: disabled
-          ? '0 3px 0 #000'
-          : `0 3px 0 #000, inset 0 1px 0 rgba(255,255,255,0.3)`,
+        background: disabled ? '#d0ccc0' : isActive ? '#fff' : c.bg,
+        color: disabled ? '#808070' : isActive ? c.bg : c.text,
+        border: isActive ? `2px solid ${c.bg}` : `2px solid ${disabled ? '#b0ac98' : '#282820'}`,
+        boxShadow: disabled ? 'none' : '2px 2px 0 rgba(0,0,0,0.35)',
         textShadow:
           !disabled && !isActive && c.text === '#fff'
-            ? '1px 1px 0 rgba(0,0,0,0.5)'
+            ? '1px 1px 0 rgba(0,0,0,0.45)'
             : 'none',
         cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.55 : 1,
-        transition: 'all 0.08s',
+        opacity: disabled ? 0.6 : 1,
+        transition: 'all 0.06s',
         minHeight: '52px',
-        borderRadius: '4px',
+        borderRadius: '3px',
         fontFamily: "'Press Start 2P', monospace",
       }}
     >
-      {/* Move name */}
       <span
         style={{
-          fontSize: '8px',
+          fontSize: '7px',
           lineHeight: 1.3,
           textTransform: 'capitalize',
           letterSpacing: '0.04em',
           display: 'block',
           width: '100%',
-          paddingRight: move.power ? '20px' : '0',
+          paddingRight: move.power ? '18px' : '0',
         }}
       >
         {move.name.replace(/-/g, ' ')}
       </span>
 
-      {/* PP display */}
       <span
         style={{
-          fontSize: '6px',
+          fontSize: '11px',
           fontFamily: "'VT323', monospace",
-          color: disabled ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.55)',
+          color: disabled ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.75)',
           letterSpacing: '0.02em',
         }}
       >
-        PP {move.pp ?? '--'}/{move.pp ?? '--'}
+        PP {move.currentPp}/{move.pp ?? move.currentPp}
       </span>
 
-      {/* Bottom row: type label + damage class icon */}
-      <span style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '100%' }}>
         <span
           style={{
             fontFamily: "'Press Start 2P', monospace",
-            fontSize: '6px',
+            fontSize: '5px',
             textTransform: 'uppercase',
             padding: '1px 4px',
             borderRadius: '2px',
-            background: 'rgba(0,0,0,0.3)',
-            color: c.text === '#fff' ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)',
+            background: 'rgba(0,0,0,0.25)',
+            color: c.text === '#fff' ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.55)',
             letterSpacing: '0.06em',
           }}
         >
           {move.type}
         </span>
         <span
-          style={{
-            fontSize: '10px',
-            marginLeft: 'auto',
-            opacity: 0.75,
-          }}
+          style={{ fontSize: '10px', marginLeft: 'auto', opacity: 0.7 }}
           title={move.damageClass}
         >
           {icon}
         </span>
       </span>
 
-      {/* Power top-right */}
       {move.power !== null && move.power > 0 && (
         <span
           style={{
             position: 'absolute',
             top: '6px',
-            right: '6px',
+            right: '5px',
             fontFamily: "'VT323', monospace",
             fontSize: '14px',
-            color:
-              c.text === '#fff' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)',
+            color: c.text === '#fff' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)',
           }}
         >
           {move.power}

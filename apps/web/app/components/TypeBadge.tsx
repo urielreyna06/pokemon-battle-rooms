@@ -10,10 +10,10 @@ interface TypeBadgeProps {
 }
 
 const SIZE_STYLES: Record<Size, React.CSSProperties> = {
-  xs: { fontSize: '8px',  padding: '2px 6px' },
-  sm: { fontSize: '9px',  padding: '2px 8px' },
-  md: { fontSize: '10px', padding: '4px 10px' },
-  lg: { fontSize: '12px', padding: '4px 12px' },
+  xs: { fontSize: '0.7rem', padding: '2px 6px' },
+  sm: { fontSize: '0.7rem', padding: '2px 8px' },
+  md: { fontSize: '0.7rem', padding: '4px 10px' },
+  lg: { fontSize: '0.7rem', padding: '4px 12px' },
 };
 
 export function TypeBadge({ type, size = 'md' }: TypeBadgeProps) {
@@ -29,6 +29,10 @@ export function TypeBadge({ type, size = 'md' }: TypeBadgeProps) {
         letterSpacing: '0.06em',
         background: c.bg,
         color: c.text,
+        maxWidth: '80px',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
         border: '2px solid #14101a',
         boxShadow: '0 2px 0 #000, inset 0 1px 0 rgba(255,255,255,0.4)',
         textShadow: c.text === '#fff' ? '1px 1px 0 rgba(0,0,0,0.5)' : 'none',

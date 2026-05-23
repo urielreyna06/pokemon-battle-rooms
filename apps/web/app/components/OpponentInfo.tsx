@@ -12,47 +12,50 @@ export function OpponentInfo({ pokemon, player }: {
   return (
     <div
       style={{
-        background: 'rgba(10, 8, 20, 0.90)',
-        border: '3px solid #2a1f2e',
-        borderBottom: '2px solid #3a2e4a',
-        borderRadius: '8px',
-        padding: '10px 12px',
-        boxShadow: '0 4px 0 #000',
-        borderTop: '1px solid rgba(255,255,255,0.07)',
+        background: '#f0f0e0',
+        border: '3px solid #282820',
+        borderRadius: '4px',
+        padding: '7px 10px 6px',
+        minWidth: '170px',
+        maxWidth: '195px',
+        boxShadow: '3px 3px 0 rgba(0,0,0,0.4)',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '4px' }}>
         <span
           style={{
-            fontFamily: "'Silkscreen', monospace",
-            fontSize: '16px',
-            fontWeight: 'bold',
-            color: '#f0e8d0',
+            fontFamily: "'Press Start 2P', monospace",
+            fontSize: '7px',
+            color: '#181818',
+            letterSpacing: '0.03em',
             textTransform: 'capitalize',
-            letterSpacing: '0.04em',
           }}
         >
           {pokemon.name.replace(/-/g, ' ')}
         </span>
-        {pokemon.types.map((t) => (
-          <TypeBadge key={t} type={t as PokemonType} size="xs" />
-        ))}
-        {pokemon.statusConditions.map((s) => (
-          <StatusBadge key={s.type} status={s.type as StatusType} remainingTurns={s.remainingTurns} />
-        ))}
         <span
           style={{
-            marginLeft: 'auto',
             fontFamily: "'Press Start 2P', monospace",
-            fontSize: '7px',
-            color: '#5b4a5e',
+            fontSize: '6px',
+            color: '#484848',
+            letterSpacing: '0.03em',
           }}
         >
-          Lv{50}
+          Lv50
         </span>
       </div>
+      {(pokemon.types.length > 0 || pokemon.statusConditions.length > 0) && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px', marginBottom: '5px' }}>
+          {pokemon.types.map((t) => (
+            <TypeBadge key={t} type={t as PokemonType} size="xs" />
+          ))}
+          {pokemon.statusConditions.map((s) => (
+            <StatusBadge key={s.type} status={s.type as StatusType} remainingTurns={s.remainingTurns} />
+          ))}
+        </div>
+      )}
       <HPBar current={pokemon.currentHp} max={pokemon.maxHp} width="100%" />
-      <div style={{ marginTop: '6px' }}>
+      <div style={{ marginTop: '5px' }}>
         <BallRow team={player.team} activePokemonId={player.activePokemonId} mirror />
       </div>
     </div>
