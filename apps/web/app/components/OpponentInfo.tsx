@@ -11,6 +11,10 @@ export function OpponentInfo({ pokemon, player }: {
 }) {
   return (
     <div
+      data-testid="pb-opp-info"
+      data-pokemon={pokemon.name}
+      data-current-hp={pokemon.currentHp}
+      data-max-hp={pokemon.maxHp}
       style={{
         background: '#f0f0e0',
         border: '3px solid #282820',

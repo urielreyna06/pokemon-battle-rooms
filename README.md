@@ -268,6 +268,42 @@ bun run test auth.test.ts
 | `pricing-flow.test.ts` | 6 | Full subscription lifecycle (none→active→past_due→canceled) |
 | `mongo-ttl.test.ts` | 4 | MongoDB TTL index creation for rooms and battles collections |
 
+### Playwright E2E Suite (`apps/web/tests/`)
+
+A separate end-to-end suite using **Playwright** (TypeScript) lives under `apps/web/tests/`. It exercises the five critical user flows and four negative cases that map directly to the recurring bugs documented in `RCA.md`.
+
+```bash
+cd apps/web
+bun install
+bunx playwright install --with-deps
+
+# One-time: capture an authenticated Clerk session for protected specs
+bunx playwright codegen http://localhost:3000 --save-storage=tests/.auth/user.json
+
+# Run the whole suite
+bun run e2e
+
+# Single spec
+bunx playwright test tests/flujo5_forfeit_realtime.spec.ts
+
+# HTML report
+bun run e2e:report
+```
+
+| Spec | Covers |
+|------|--------|
+| `flujo1_sala_lobby` | Create room + join + auto-nav to /team |
+| `flujo2_seleccion_equipo` | 75-card initial paint, search, type filter, lock-in |
+| `flujo3_turno_normal` | Turn lock after submit, server waits for both players |
+| `flujo4_switch_pokemon` | Voluntary switch + forced switch after KO |
+| `flujo5_forfeit_realtime` | Forfeit propagates to opponent without refresh |
+| `negativo1_spam_ataques` | 10 parallel actions → exactly 1 accepted |
+| `negativo2_switch_invalido` | Switch-to-active and unknown-id are rejected |
+| `negativo3_stripe_success` | `/pricing?success=true` returns 200, banner visible |
+| `negativo4_sala_inexistente` | Bad room code surfaces toast, no navigation |
+
+Full guide: `apps/web/README-e2e.md`. Design notes: `apps/web/tests/_meta/test-plan.md` and `selectors-map.md`.
+
 All tests use **Vitest** with **@vitest/coverage-v8** for coverage tracking.
 
 ---

@@ -281,6 +281,7 @@ function BattlePage() {
       {!isSpectator && battle.status === 'active' && phase !== 'finished' && (
         <div style={{ padding: '0 16px 12px', flexShrink: 0, textAlign: 'center', position: 'sticky', bottom: 0, background: '#e8e8d8' }}>
           <button
+            data-testid="pb-forfeit-open"
             onClick={() => setShowForfeit(true)}
             style={{
               background: 'transparent',
@@ -340,6 +341,7 @@ function SpectatorPanel() {
 function WaitingPanel() {
   return (
     <div
+      data-testid="pb-waiting"
       style={{
         display: 'flex',
         alignItems: 'center',

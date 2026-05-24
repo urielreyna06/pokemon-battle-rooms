@@ -118,6 +118,7 @@ function LobbyPage() {
             Room Code
           </p>
           <div
+            data-testid="pb-room-code"
             onClick={copyCode}
             style={{
               fontFamily: "'Press Start 2P', monospace",
@@ -168,6 +169,7 @@ function LobbyPage() {
         {/* Players list */}
         <div>
           <p
+            data-testid="pb-lobby-status"
             style={{
               fontFamily: "'Press Start 2P', monospace",
               fontSize: '7px',

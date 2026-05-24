@@ -109,6 +109,12 @@ export function VictoryOverlay({ won, isSpectator, winnerPlayerId, players, endR
 
   return (
     <div
+      data-testid="pb-victory"
+      data-end-reason={endReason ?? 'ko'}
+      data-won={won ? 'true' : 'false'}
+      data-spectator={isSpectator ? 'true' : 'false'}
+      role="dialog"
+      aria-label="Battle result"
       style={{
         position: 'fixed',
         inset: 0,
@@ -122,8 +128,9 @@ export function VictoryOverlay({ won, isSpectator, winnerPlayerId, players, endR
         padding: '24px',
       }}
     >
-      <div style={{ lineHeight: 1 }}>{icon}</div>
+      <div data-testid="pb-victory-icon" style={{ lineHeight: 1 }}>{icon}</div>
       <h2
+        data-testid="pb-victory-heading"
         style={{
           fontFamily: "'Press Start 2P', monospace",
           fontSize: '18px',
@@ -136,7 +143,7 @@ export function VictoryOverlay({ won, isSpectator, winnerPlayerId, players, endR
       >
         {heading}
       </h2>
-      <p style={{ fontFamily: "'VT323', monospace", fontSize: '22px', color: '#5b4a5e', textAlign: 'center', margin: 0 }}>
+      <p data-testid="pb-victory-sub" style={{ fontFamily: "'VT323', monospace", fontSize: '22px', color: '#5b4a5e', textAlign: 'center', margin: 0 }}>
         {sub}
       </p>
       <a

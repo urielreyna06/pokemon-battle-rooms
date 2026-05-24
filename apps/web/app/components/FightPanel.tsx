@@ -56,6 +56,7 @@ export function FightPanel({
         ))}
       </div>
       <button
+        data-testid="pb-switch-open"
         onClick={onSwitchMenu}
         disabled={!canAct}
         style={{

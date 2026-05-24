@@ -20,6 +20,9 @@ export function TypeBadge({ type, size = 'md' }: TypeBadgeProps) {
   const c = TYPE_COLORS[type] ?? TYPE_COLORS.normal;
   return (
     <span
+      data-testid="pb-type-badge"
+      data-type={type}
+      data-size={size}
       style={{
         display: 'inline-flex',
         alignItems: 'center',

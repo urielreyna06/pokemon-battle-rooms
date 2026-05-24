@@ -52,6 +52,8 @@ export function Toast({ toast, onDismiss, duration = 3000 }: ToastProps) {
       }}
     >
       <div
+        data-testid="pb-toast"
+        data-toast-kind={kind}
         style={{
           display: 'flex',
           alignItems: 'center',

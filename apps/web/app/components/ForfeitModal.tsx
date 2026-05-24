@@ -4,6 +4,9 @@ export function ForfeitModal({ onConfirm, onCancel }: {
 }) {
   return (
     <div
+      data-testid="pb-forfeit-modal"
+      role="dialog"
+      aria-label="Forfeit confirmation"
       style={{
         position: 'fixed',
         inset: 0,
@@ -60,6 +63,7 @@ export function ForfeitModal({ onConfirm, onCancel }: {
         </p>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
+            data-testid="pb-forfeit-cancel"
             onClick={onCancel}
             style={{
               flex: 1,
@@ -78,6 +82,7 @@ export function ForfeitModal({ onConfirm, onCancel }: {
             CANCEL
           </button>
           <button
+            data-testid="pb-forfeit-confirm"
             onClick={onConfirm}
             style={{
               flex: 1,

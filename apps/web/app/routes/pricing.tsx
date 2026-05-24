@@ -110,7 +110,7 @@ function PricingPage() {
       </div>
 
       {SUCCESS_PARAM && (
-        <div className="alert alert-success" style={{ textAlign: 'center', fontSize: '1.1rem', padding: '1.2rem 2rem' }}>
+        <div data-testid="pb-pricing-success" className="alert alert-success" style={{ textAlign: 'center', fontSize: '1.1rem', padding: '1.2rem 2rem' }}>
           {confirming
             ? '⏳ Payment confirmed! Activating your Shiny subscription…'
             : isSubscriber
@@ -129,7 +129,7 @@ function PricingPage() {
         </div>
       )}
       {CANCELED_PARAM && (
-        <div className="alert alert-info">
+        <div data-testid="pb-pricing-canceled" className="alert alert-info">
           Checkout canceled. You can subscribe anytime.
         </div>
       )}
@@ -175,6 +175,7 @@ function PricingPage() {
             </button>
           ) : (
             <button
+              data-testid="pb-subscribe"
               className="btn btn-primary"
               onClick={handleSubscribe}
               disabled={loading}

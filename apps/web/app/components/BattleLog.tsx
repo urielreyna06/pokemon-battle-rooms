@@ -30,6 +30,8 @@ export function BattleLog({ entries, maxVisible = 10 }: BattleLogProps) {
 
   return (
     <div
+      data-testid="pb-battle-log"
+      data-entry-count={entries.length}
       ref={containerRef}
       style={{
         background: '#f8f8f0',

@@ -40,3 +40,10 @@ coverage/
 
 # Local learning/architecture notes (personal reference, not part of the public repo)
 ARCHITECTURE.md
+
+# Playwright
+apps/web/playwright-report/
+apps/web/test-results/
+apps/web/tests/.auth/
+apps/web/.env.test
+apps/api/.env.test

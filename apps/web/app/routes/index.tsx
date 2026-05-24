@@ -303,8 +303,9 @@ function HomePage() {
           </label>
           <input
             className="landing-input"
+            data-testid="pb-player-name"
             style={INPUT_STYLE}
-            placeholder="Ash Ketchum"
+            placeholder="Enter your name"
             value={playerName}
             onChange={(e) => setPlayerName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
@@ -314,6 +315,7 @@ function HomePage() {
           <div style={{ margin: '20px 0', borderTop: '2px solid #1e1828' }} />
 
           <button
+            data-testid="pb-create-room"
             style={{ ...BTN_PRIMARY, opacity: loading ? 0.7 : 1 }}
             onClick={handleCreate}
             disabled={!!loading}
@@ -345,6 +347,7 @@ function HomePage() {
           <div style={{ display: 'flex', gap: '8px' }}>
             <input
               className="landing-input"
+              data-testid="pb-join-code"
               style={{
                 ...INPUT_STYLE,
                 flex: 1,
@@ -352,13 +355,14 @@ function HomePage() {
                 letterSpacing: '0.2em',
                 textAlign: 'center',
               }}
-              placeholder="ABC123"
+              placeholder="ROOM CODE"
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
               maxLength={6}
             />
             <button
+              data-testid="pb-join-room"
               style={{ ...BTN_SECONDARY, opacity: loading ? 0.7 : 1 }}
               onClick={handleJoin}
               disabled={!!loading}

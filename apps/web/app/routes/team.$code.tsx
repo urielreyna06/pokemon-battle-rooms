@@ -317,6 +317,8 @@ function TeamSelectPage() {
           </button>
         )}
         <div
+          data-testid="pb-selected-count"
+          data-count={selected.length}
           style={{
             fontFamily: "'Press Start 2P', monospace",
             fontSize: '14px',
@@ -442,6 +444,7 @@ function TeamSelectPage() {
 
         {/* Search */}
         <input
+          data-testid="pb-team-search"
           style={{
             display: 'block',
             width: '100%',
@@ -456,7 +459,7 @@ function TeamSelectPage() {
             marginBottom: '12px',
             boxSizing: 'border-box',
           }}
-          placeholder="Search Pokémon..."
+          placeholder="Search Pokémon"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -487,6 +490,7 @@ function TeamSelectPage() {
             {['normal', 'fire', 'water', 'electric', 'grass', 'ice', 'fighting', 'poison', 'ground', 'flying', 'psychic', 'bug', 'rock', 'ghost', 'dragon', 'dark', 'steel', 'fairy'].map((type) => (
               <button
                 key={type}
+                data-testid={`pb-type-filter-${type}`}
                 onClick={() => toggleType(type)}
                 style={{
                   background: typeFilter.includes(type) ? '#e84028' : '#2a1f2e',
@@ -584,6 +588,11 @@ function TeamSelectPage() {
             return (
               <div
                 key={p.pokedexId}
+                data-testid="pb-pokemon-card"
+                data-pokedex-id={p.pokedexId}
+                data-name={p.name}
+                data-selected={isSelected ? 'true' : 'false'}
+                data-opponent-taken={isOpponentSelected ? 'true' : 'false'}
                 onClick={() => togglePokemon(p.pokedexId)}
                 style={{
                   position: 'relative',
@@ -756,6 +765,7 @@ function TeamSelectPage() {
           {selected.length} selected
         </span>
         <button
+          data-testid="pb-team-confirm"
           onClick={handleConfirm}
           disabled={selected.length < 1 || submitting}
           style={{

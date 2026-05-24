@@ -1,0 +1,28 @@
+{
+  "players": {
+    "p1": "Ash",
+    "p2": "Gary"
+  },
+  "stripe": {
+    "card": "4242424242424242",
+    "exp": "12/34",
+    "cvc": "123",
+    "zip": "12345"
+  },
+  "expectedPokemon": ["bulbasaur", "charmander", "squirtle"],
+  "roomCodeLength": 6,
+  "timeouts": {
+    "realtimeMs": 2500,
+    "turnResolveMs": 6000,
+    "subscriptionPollMs": 32000,
+    "lobbyAutoNavMs": 4000
+  },
+  "endpoints": {
+    "api": "http://localhost:3001",
+    "createRoom": "/rooms",
+    "joinRoom": "/rooms/:code/join",
+    "battleAction": "/battle/:code/action",
+    "forfeit": "/battle/:code/forfeit"
+  },
+  "invalidRoomCode": "ZZZZZZ"
+}

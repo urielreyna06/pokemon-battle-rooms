@@ -17,6 +17,8 @@ export function SwitchMenu({
 
   return (
     <div
+      data-testid="pb-switch-menu"
+      data-forced={isForcedSwitch ? 'true' : 'false'}
       style={{
         background: '#f0f0e0',
         border: '3px solid #282820',
@@ -36,6 +38,7 @@ export function SwitchMenu({
         </span>
         {!isForcedSwitch && (
           <button
+            data-testid="pb-switch-cancel"
             onClick={onCancel}
             style={{
               background: '#e0e0d0',
@@ -61,6 +64,10 @@ export function SwitchMenu({
           return (
             <div
               key={p.instanceId}
+              data-testid="pb-switch-card"
+              data-instance-id={p.instanceId}
+              data-fainted={isFainted ? 'true' : 'false'}
+              data-active={isActive ? 'true' : 'false'}
               onClick={() => !isDisabled && onSwitch(p.instanceId)}
               style={{
                 background: isActive ? '#e0d8c8' : isFainted ? '#c8c0b0' : '#ffffff',

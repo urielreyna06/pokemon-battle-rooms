@@ -24,6 +24,8 @@ export function MoveButton({ move, disabled = false, selected = false, onClick }
 
   return (
     <button
+      data-testid="pb-move"
+      data-move-id={move.id}
       onClick={onClick}
       disabled={disabled}
       style={{
