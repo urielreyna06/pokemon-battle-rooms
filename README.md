@@ -239,7 +239,7 @@ The import script (`scripts/import-pokemon.ts`):
 ```bash
 cd apps/api
 
-# Run all 150 tests
+# Run all 154 tests
 bun run test
 
 # Run with coverage report (must stay ≥80%)
@@ -251,14 +251,14 @@ bun run test auth.test.ts
 
 > **Important:** Use `bun run test` (not `bun test`). `bun test` invokes Bun's native runner which lacks `vi.mock` support and breaks the test suite.
 
-### Test Files (12 files, 150 tests)
+### Test Files (12 files, 154 tests)
 
 | File | Tests | Focus |
 |------|-------|-------|
 | `auth.test.ts` | 5 | Clerk JWT verification, role-based auth |
 | `subscription.test.ts` | 7 | Subscription status checks, shiny unlock |
 | `battle-no-regression.test.ts` | 9 | Damage formula, crits, status effects |
-| `battle-faint-switch.test.ts` | 15 | Faint detection, forced switch flow, alive backup, full attack→faint→switch→continue |
+| `battle-faint-switch.test.ts` | 19 | Faint detection, forced switch flow, alive backup, full attack→faint→switch→continue, registerAction faint-aware validation |
 | `battle-turn-order.test.ts` | 16 | Turn ordering, speed, priority, tiebreaks, `bothPlayersActed` |
 | `battle-pp-enforcement.test.ts` | 38 | PP decrement, out-of-PP blocking, Struggle fallback |
 | `battle-spam-prevention.test.ts` | 18 | Double-submit prevention, phase transitions, race conditions |

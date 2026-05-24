@@ -120,4 +120,74 @@ Ten issues identified and resolved across the codebase. Each entry documents the
 
 ---
 
-*All ten issues are covered by the test suite in `apps/api/tests/` — run `bun run test` from `apps/api` to verify.*
+*All ten issues above are covered by the test suite in `apps/api/tests/` — run `bun run test` from `apps/api` to verify.*
+
+---
+
+## Issue 11: TypeBadge Oversized — Exceeded Layout Constraints
+
+**Symptom:** Type badges in `OpponentInfo`, `MyInfo`, and team screens were too wide, overflowing their parent containers and misaligning the DS-style info panels.
+
+**Root Cause:** `TypeBadge.tsx` had no explicit `maxWidth` constraint. Combined with padding and longer type names (e.g., "fighting", "electric"), badges grew beyond the intended 72px cap.
+
+**Fix:** Set `maxWidth: '72px'` with `overflow: 'hidden'` and `textOverflow: 'ellipsis'` so long type names are truncated rather than expanding the badge. Font size was already ≤ 0.75rem (`0.7rem` for all size variants).
+
+---
+
+## Issue 12: Attack Spam — Duplicate Actions Per Turn Not Prevented Server-Side
+
+**Symptom:** Rapidly clicking a move button sent multiple `POST /battle/:roomCode/action` requests for the same turn. The engine received duplicate player actions, causing state corruption and unpredictable turn resolution.
+
+**Root Cause:** `registerAction` checked `playerState.selectedAction !== null` in memory before writing. Two concurrent requests could both pass the in-memory check (both read `null`) before either write completed, resulting in two actions registered for the same player in the same turn.
+
+**Fix:** Replaced the in-memory guard with an atomic MongoDB `updateOne` using `arrayFilters` that requires `selectedAction: null` in the match condition:
+```ts
+updateOne(
+  { roomCode, "players.id": playerId, "players.selectedAction": null },
+  { $set: { "players.$[p].selectedAction": action } },
+  { arrayFilters: [{ "p.id": playerId }] }
+)
+```
+If `modifiedCount === 0`, the action is rejected with an error. Only one concurrent request can win the write; all others are rejected atomically.
+
+---
+
+## Issue 13: Switch Action Blocked When Active Pokémon Was Fainted
+
+**Symptom:** After a player's active Pokémon fainted, submitting a switch action from the forced-switch UI returned an error: "Your active Pokémon has fainted. You must switch first." — preventing any recovery and soft-locking the battle.
+
+**Root Cause:** Two bugs in `battleEngine.ts`:
+1. `registerAction` checked `activePokemon.currentHp <= 0` before the `action.type === "move"` branch, so *all* action types (including switch) were rejected when the active Pokémon had fainted.
+2. `processTurn` skipped the entire action when `activePokemon.currentHp <= 0`, including switch actions — so even if a switch somehow got registered, it would be silently ignored.
+
+**Fix:**
+- Moved the `currentHp <= 0` check inside the `if (action.type === "move")` branch so only move actions are rejected when the active Pokémon has fainted.
+- Changed the `processTurn` skip condition to `activePokemon.currentHp <= 0 && action.type !== "switch"` so switch actions are always executed even on fainted active Pokémon.
+
+---
+
+## Issue 14: Forfeit Button Invisible and Failing WCAG AA Contrast
+
+**Symptom:** At 1280×800 the forfeit button was below the fold and required scrolling. The button text (`#888878` on `#e8e8d8`) had a contrast ratio of ~2.7:1, failing WCAG AA (minimum 4.5:1 for small text).
+
+**Root Cause:** The forfeit button container was a normal flex child at the bottom of a vertically scrolling column, so it scrolled off-screen at common viewport heights. Text color was chosen for visual subtlety rather than accessibility.
+
+**Fix:**
+- Added `position: 'sticky'`, `bottom: 0`, and `background: '#e8e8d8'` to the forfeit container so it pins to the viewport bottom regardless of scroll position.
+- Darkened button text to `#484838` (~5.3:1 contrast ratio, passes WCAG AA) and border to `#6a6858`. Hover state uses `#c01010` (red) for clear affordance.
+
+---
+
+## Issue 15: Opponent Forfeit Not Received in Real Time — SSE Drops Silently
+
+**Symptom:** When an opponent forfeited or the server restarted, the battle screen showed no update. The `es.onerror` handler was a no-op, so the SSE connection dropped silently and the battle froze.
+
+**Root Cause:** `useBattleSSE` set `es.onerror = () => {}`, swallowing all connection errors without reconnecting. Any transient network hiccup, server restart, or proxy timeout permanently terminated the event stream for that client.
+
+**Fix:** Rewrote `useBattleSSE` with:
+- A `closedRef` boolean that distinguishes intentional `closeSSE()` calls from unintended errors.
+- A recursive `connect()` function with exponential backoff: 1s → 2s → 4s → 8s → 16s (max), up to 5 retries.
+- `retries` resets to 0 on each successful `battle` event, so a stable connection never hits the retry cap.
+- A successful `battle` event resets the counter; `closedRef.current = true` prevents reconnects after deliberate close.
+
+*All fifteen issues are now covered by the test suite — run `bun run test` from `apps/api` to verify (154 tests).*
