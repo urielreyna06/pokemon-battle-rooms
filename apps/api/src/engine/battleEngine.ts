@@ -408,7 +408,7 @@ export async function processTurn(
       (p) => p.instanceId === actingPlayer.activePokemonId
     )!;
 
-    if (activePokemon.currentHp <= 0) {
+    if (activePokemon.currentHp <= 0 && action.type !== "switch") {
       log.push(`${activePokemon.name} has fainted and cannot act!`);
       continue;
     }
@@ -582,11 +582,11 @@ export async function registerAction(
   const activePokemon = playerState.team.find(
     (p) => p.instanceId === playerState.activePokemonId
   );
-  if (!activePokemon || activePokemon.currentHp <= 0) {
-    return { valid: false, error: "Your active Pokémon has fainted. You must switch first." };
-  }
 
   if (action.type === "move") {
+    if (!activePokemon || activePokemon.currentHp <= 0) {
+      return { valid: false, error: "Your active Pokémon has fainted. You must switch first." };
+    }
     const move = activePokemon.moves.find((m) => m.id === action.moveId);
     if (!move) {
       return {
@@ -614,12 +614,25 @@ export async function registerAction(
     }
   }
 
-  // Register the action
+  // Register the action atomically — the arrayFilters condition ensures we only write
+  // if selectedAction is still null for this player, preventing double-submit races.
   playerState.selectedAction = action;
 
-  await db
+  const result = await db
     .collection<BattleDoc>("battles")
-    .updateOne({ roomCode: battle.roomCode }, { $set: { players: battle.players } });
+    .updateOne(
+      {
+        roomCode: battle.roomCode,
+        "players.id": playerId,
+        "players.selectedAction": null,
+      },
+      { $set: { "players.$[p].selectedAction": action } },
+      { arrayFilters: [{ "p.id": playerId }] }
+    );
+
+  if (result.modifiedCount === 0) {
+    return { valid: false, error: "You have already submitted an action this turn" };
+  }
 
   return { valid: true };
 }

@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { bothPlayersActed } from '../src/engine/battleEngine';
+import { describe, it, expect, vi } from 'vitest';
+import { bothPlayersActed, registerAction } from '../src/engine/battleEngine';
 import type { BattleDoc, BattlePlayerState, BattlePokemon, BattleMove } from '../../../../packages/shared/types';
 
 // ─── Helpers (mirror battle-no-regression.test.ts) ───────────────────────────
@@ -157,6 +157,67 @@ describe('BattleMove optional pp field', () => {
     };
     const display = move.pp ?? '--';
     expect(display).toBe('--');
+  });
+});
+
+// ─── registerAction: faint-aware validation ───────────────────────────────────
+
+function makeDb(modifiedCount = 1) {
+  const updateOne = vi.fn().mockResolvedValue({ modifiedCount });
+  const collection = vi.fn().mockReturnValue({ updateOne });
+  const db = { collection };
+  return { db, updateOne };
+}
+
+describe('registerAction — fainted active Pokémon', () => {
+  it('rejects a move action when the active Pokémon has fainted (no DB call)', async () => {
+    const fainted = makePokemon({ instanceId: 'pok_1', name: 'Pidgey', currentHp: 0 });
+    const backup  = makePokemon({ instanceId: 'pok_2', name: 'Rattata', currentHp: 50 });
+    const battle  = makeBattle({
+      players: [makePlayer('p1', undefined, [fainted, backup]), makePlayer('p2')],
+    });
+    const { db } = makeDb();
+    const result = await registerAction(db as any, battle, 'p1', { type: 'move', moveId: 'tackle' });
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toMatch(/fainted/i);
+    expect(db.collection).not.toHaveBeenCalled();
+  });
+
+  it('allows a switch action when the active Pokémon has fainted', async () => {
+    const fainted = makePokemon({ instanceId: 'pok_1', name: 'Pidgey', currentHp: 0 });
+    const backup  = makePokemon({ instanceId: 'pok_2', name: 'Rattata', currentHp: 50 });
+    const battle  = makeBattle({
+      players: [makePlayer('p1', undefined, [fainted, backup]), makePlayer('p2')],
+    });
+    const { db, updateOne } = makeDb(1);
+    const result = await registerAction(db as any, battle, 'p1', { type: 'switch', targetInstanceId: 'pok_2' });
+    expect(result.valid).toBe(true);
+    expect(updateOne).toHaveBeenCalledOnce();
+  });
+
+  it('rejects switch to a fainted backup even when active is also fainted', async () => {
+    const fainted1 = makePokemon({ instanceId: 'pok_1', name: 'Pidgey',  currentHp: 0 });
+    const fainted2 = makePokemon({ instanceId: 'pok_2', name: 'Rattata', currentHp: 0 });
+    const battle   = makeBattle({
+      players: [makePlayer('p1', undefined, [fainted1, fainted2]), makePlayer('p2')],
+    });
+    const { db } = makeDb();
+    const result = await registerAction(db as any, battle, 'p1', { type: 'switch', targetInstanceId: 'pok_2' });
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toMatch(/fainted/i);
+    expect(db.collection).not.toHaveBeenCalled();
+  });
+
+  it('rejects duplicate action when DB modifiedCount is 0 (race condition)', async () => {
+    const fainted = makePokemon({ instanceId: 'pok_1', name: 'Pidgey', currentHp: 0 });
+    const backup  = makePokemon({ instanceId: 'pok_2', name: 'Rattata', currentHp: 50 });
+    const battle  = makeBattle({
+      players: [makePlayer('p1', undefined, [fainted, backup]), makePlayer('p2')],
+    });
+    const { db } = makeDb(0); // simulate race: another request already wrote
+    const result = await registerAction(db as any, battle, 'p1', { type: 'switch', targetInstanceId: 'pok_2' });
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toMatch(/already submitted/i);
   });
 });
 

@@ -279,13 +279,13 @@ function BattlePage() {
       </div>
 
       {!isSpectator && battle.status === 'active' && phase !== 'finished' && (
-        <div style={{ padding: '0 16px 12px', flexShrink: 0, textAlign: 'center' }}>
+        <div style={{ padding: '0 16px 12px', flexShrink: 0, textAlign: 'center', position: 'sticky', bottom: 0, background: '#e8e8d8' }}>
           <button
             onClick={() => setShowForfeit(true)}
             style={{
               background: 'transparent',
-              color: '#888878',
-              border: '1px solid #b0a890',
+              color: '#484838',
+              border: '1px solid #6a6858',
               borderRadius: '4px',
               padding: '5px 16px',
               fontFamily: "'Press Start 2P', monospace",
@@ -299,8 +299,8 @@ function BattlePage() {
               (e.currentTarget as HTMLButtonElement).style.borderColor = '#c01010';
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.color = '#888878';
-              (e.currentTarget as HTMLButtonElement).style.borderColor = '#b0a890';
+              (e.currentTarget as HTMLButtonElement).style.color = '#484838';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = '#6a6858';
             }}
           >
             ✕ FORFEIT

@@ -29,7 +29,7 @@ export function TypeBadge({ type, size = 'md' }: TypeBadgeProps) {
         letterSpacing: '0.06em',
         background: c.bg,
         color: c.text,
-        maxWidth: '80px',
+        maxWidth: '72px',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
